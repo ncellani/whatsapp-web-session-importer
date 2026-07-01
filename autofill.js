@@ -1,8 +1,25 @@
 (() => {
-  if (window.__sessionConnectorLoaded) {
+  const existingLoader = window.__sessionConnectorLoaded;
+  const loaderRuntimeId = (() => {
+    try {
+      return chrome.runtime?.id || "";
+    } catch {
+      return "";
+    }
+  })();
+  if (
+    existingLoader &&
+    typeof existingLoader === "object" &&
+    existingLoader.active === true &&
+    existingLoader.runtimeId === loaderRuntimeId
+  ) {
     return;
   }
-  window.__sessionConnectorLoaded = true;
+  window.__sessionConnectorLoaded = {
+    active: true,
+    runtimeId: loaderRuntimeId,
+    loadedAt: Date.now()
+  };
 
   const CLIENT_PARAM = "client";
   const TOKEN_PARAM = "token";
@@ -46,10 +63,101 @@
     loginPollAttempts: 0,
     themeObserver: null,
     cleanupStarted: false,
+    extensionContextInvalidated: false,
     devMode: false,
     devModeClickCount: 0,
     devModeClickTimer: null
   };
+
+  function extensionContextError(error) {
+    const message = String(error?.message || error || "");
+    return message.includes("Extension context invalidated") ||
+      message.includes("context invalidated") ||
+      message.includes("Cannot read properties of undefined (reading 'local')") ||
+      message.includes("Cannot read properties of undefined (reading 'connect')") ||
+      message.includes("Cannot read properties of undefined (reading 'getManifest')");
+  }
+
+  function hasExtensionContext() {
+    try {
+      return typeof chrome !== "undefined" &&
+        Boolean(chrome.runtime?.id) &&
+        Boolean(chrome.storage?.local);
+    } catch {
+      return false;
+    }
+  }
+
+  function markExtensionContextInvalidated() {
+    const wasInvalidated = state.extensionContextInvalidated;
+    state.extensionContextInvalidated = true;
+    if (!wasInvalidated) {
+      if (window.__sessionConnectorLoaded && typeof window.__sessionConnectorLoaded === "object") {
+        window.__sessionConnectorLoaded.active = false;
+      }
+      closeImportPort();
+      setBusy(false);
+    }
+    setResult("A extensão foi atualizada ou recarregada. Recarregue esta aba do WhatsApp Web e tente novamente.", "error");
+  }
+
+  function handleExtensionContextFailure(error) {
+    if (!extensionContextError(error) && hasExtensionContext()) {
+      return false;
+    }
+    markExtensionContextInvalidated();
+    return true;
+  }
+
+  function warnIfActiveContext(label, error) {
+    if (!handleExtensionContextFailure(error)) {
+      console.warn(label, error);
+    }
+  }
+
+  async function storageGet(keys, fallback = {}) {
+    if (!hasExtensionContext()) {
+      markExtensionContextInvalidated();
+      return fallback;
+    }
+    try {
+      return await chrome.storage.local.get(keys);
+    } catch (error) {
+      if (handleExtensionContextFailure(error)) {
+        return fallback;
+      }
+      throw error;
+    }
+  }
+
+  async function storageSet(values) {
+    if (!hasExtensionContext()) {
+      markExtensionContextInvalidated();
+      return false;
+    }
+    try {
+      await chrome.storage.local.set(values);
+      return true;
+    } catch (error) {
+      if (handleExtensionContextFailure(error)) {
+        return false;
+      }
+      throw error;
+    }
+  }
+
+  function extensionVersion() {
+    try {
+      return chrome.runtime?.getManifest?.().version || "";
+    } catch (error) {
+      handleExtensionContextFailure(error);
+      return "";
+    }
+  }
+
+  function defaultCleanupNoticeHTML() {
+    return "<strong>Atenção:</strong> esta sessão será conectada na instância informada e desconectada deste navegador.";
+  }
 
   function parseAutofillHash(rawUrl) {
     let url;
@@ -125,7 +233,7 @@
       return false;
     }
 
-    await chrome.storage.local.set({
+    await storageSet({
       serverUrl: autofill.client,
       instanceToken: autofill.token || ""
     });
@@ -272,6 +380,7 @@
   }
 
   function panelTemplate() {
+    const version = extensionVersion();
     return `
       <style>
         :host {
@@ -780,7 +889,7 @@
           </label>
           <label class="check">
             <input id="includeHistoryCheckbox" type="checkbox" checked />
-            <span>Incluir histórico de mensagens</span>
+            <span>Incluir histórico de mensagens (beta)</span>
           </label>
           <label id="disconnectLocalOption" class="check dev-only" hidden>
             <input id="disconnectLocalCheckbox" type="checkbox" checked />
@@ -793,13 +902,13 @@
             <button id="mainDumpButton" class="secondary dev-only" type="button" hidden>Baixar sessão</button>
             <button id="exitDevModeButton" class="secondary dev-only" type="button" hidden>Sair do modo técnico</button>
           </div>
-          <p id="cleanupNotice" class="notice"></p>
+          <p id="cleanupNotice" class="notice">${defaultCleanupNoticeHTML()}</p>
         </form>
 
         <p id="result" class="result" aria-live="polite"></p>
         <footer class="meta">
           <span id="modeLabel">Modo padrão</span>
-          <span>Versão <span id="extensionVersion">--</span></span>
+          <span>Versão <span id="extensionVersion">${version ? `v${version}` : "--"}</span></span>
         </footer>
       </section>
     `;
@@ -848,7 +957,7 @@
 
   function renderExtensionVersion() {
     const versionEl = panelEl("extensionVersion");
-    const version = chrome.runtime.getManifest().version || "";
+    const version = extensionVersion();
     if (versionEl) {
       versionEl.textContent = version ? `v${version}` : "--";
     }
@@ -866,7 +975,7 @@
     }
     if (shouldDisconnectLocalAfterImport()) {
       notice.className = "notice";
-      notice.innerHTML = "<strong>Atenção:</strong> esta sessão será conectada na instância informada e desconectada deste navegador.";
+      notice.innerHTML = defaultCleanupNoticeHTML();
       return;
     }
     notice.className = "notice warn";
@@ -893,7 +1002,7 @@
 
   async function setDevModePreference(enabled) {
     setDevMode(enabled);
-    await chrome.storage.local.set({ devMode: state.devMode });
+    await storageSet({ devMode: state.devMode });
     setResult(state.devMode ? "Modo técnico ativado." : "Modo técnico desativado.", "ok");
   }
 
@@ -906,7 +1015,7 @@
       state.devModeClickCount = 0;
       state.devModeClickTimer = null;
       setDevModePreference(!state.devMode).catch((error) => {
-        console.warn("Failed to toggle technical mode", error);
+        warnIfActiveContext("Failed to toggle technical mode", error);
       });
       return;
     }
@@ -930,7 +1039,7 @@
   }
 
   async function loadSettings() {
-    const values = await chrome.storage.local.get(["serverUrl", "instanceToken", "includeHistory", "disconnectLocal", "devMode"]);
+    const values = await storageGet(["serverUrl", "instanceToken", "includeHistory", "disconnectLocal", "devMode"]);
     const serverUrlInput = panelEl("serverUrlInput");
     const instanceTokenInput = panelEl("instanceTokenInput");
     const includeHistoryCheckbox = panelEl("includeHistoryCheckbox");
@@ -955,7 +1064,7 @@
     const instanceTokenInput = panelEl("instanceTokenInput");
     const includeHistoryCheckbox = panelEl("includeHistoryCheckbox");
     const disconnectLocalCheckbox = panelEl("disconnectLocalCheckbox");
-    await chrome.storage.local.set({
+    await storageSet({
       serverUrl: String(serverUrlInput?.value || "").trim(),
       instanceToken: String(instanceTokenInput?.value || "").trim(),
       includeHistory: includeHistoryCheckbox?.checked !== false,
@@ -1018,10 +1127,22 @@
     if (state.importRunning) {
       return;
     }
+    if (!hasExtensionContext()) {
+      markExtensionContextInvalidated();
+      return;
+    }
     closeImportPort();
     state.cleanupStarted = false;
     setBusy(true);
-    const port = chrome.runtime.connect({ name: "session-import" });
+    let port;
+    try {
+      port = chrome.runtime.connect({ name: "session-import" });
+    } catch (error) {
+      if (handleExtensionContextFailure(error)) {
+        return;
+      }
+      throw error;
+    }
     state.importPort = port;
     port.onMessage.addListener((message) => handlePortMessage(message, fallbackMessage));
     port.onDisconnect.addListener(() => {
@@ -1067,16 +1188,16 @@
     panelEl("devModeToggleArea")?.addEventListener("click", handleDevModeGesture);
     panelEl("importForm")?.addEventListener("submit", startImport);
     panelEl("serverUrlInput")?.addEventListener("blur", () => {
-      saveSettings().catch((error) => console.warn("Failed to save client", error));
+      saveSettings().catch((error) => warnIfActiveContext("Failed to save client", error));
     });
     panelEl("instanceTokenInput")?.addEventListener("blur", () => {
-      saveSettings().catch((error) => console.warn("Failed to save token", error));
+      saveSettings().catch((error) => warnIfActiveContext("Failed to save token", error));
     });
     panelEl("includeHistoryCheckbox")?.addEventListener("change", () => {
-      saveSettings().catch((error) => console.warn("Failed to save history option", error));
+      saveSettings().catch((error) => warnIfActiveContext("Failed to save history option", error));
     });
     panelEl("disconnectLocalCheckbox")?.addEventListener("change", () => {
-      saveSettings().catch((error) => console.warn("Failed to save local cleanup option", error));
+      saveSettings().catch((error) => warnIfActiveContext("Failed to save local cleanup option", error));
     });
     panelEl("tokenVisibilityButton")?.addEventListener("click", () => {
       const input = panelEl("instanceTokenInput");
@@ -1094,7 +1215,7 @@
     });
     panelEl("exitDevModeButton")?.addEventListener("click", () => {
       setDevModePreference(false).catch((error) => {
-        console.warn("Failed to disable technical mode", error);
+        warnIfActiveContext("Failed to disable technical mode", error);
       });
     });
   }
@@ -1165,7 +1286,7 @@
     }
     state.loginTimer = setTimeout(() => {
       state.loginTimer = null;
-      checkLoginState().catch((error) => console.warn("Failed to check WhatsApp login state", error));
+      checkLoginState().catch((error) => warnIfActiveContext("Failed to check WhatsApp login state", error));
     }, LOGIN_CHECK_DELAY_MS);
   }
 
@@ -1183,7 +1304,7 @@
     state.loginPollAttempts = 0;
     state.loginPollTimer = setInterval(() => {
       state.loginPollAttempts += 1;
-      checkLoginState().catch((error) => console.warn("Failed to poll WhatsApp login state", error));
+      checkLoginState().catch((error) => warnIfActiveContext("Failed to poll WhatsApp login state", error));
       if (state.autoOpened || state.loginPollAttempts >= INITIAL_LOGIN_CHECKS) {
         clearInterval(state.loginPollTimer);
         state.loginPollTimer = null;
@@ -1191,15 +1312,21 @@
     }, INITIAL_LOGIN_CHECK_INTERVAL_MS);
   }
 
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (!message || message.type !== "SESSION_CONNECTOR_OPEN_PANEL") {
-      return false;
+  if (hasExtensionContext()) {
+    try {
+      chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        if (!message || message.type !== "SESSION_CONNECTOR_OPEN_PANEL") {
+          return false;
+        }
+        openPanel({ force: true })
+          .then((opened) => sendResponse({ ok: opened, loggedIn: isWhatsAppLoggedIn() }))
+          .catch((error) => sendResponse({ ok: false, error: error.message || "Falha ao abrir painel" }));
+        return true;
+      });
+    } catch (error) {
+      handleExtensionContextFailure(error);
     }
-    openPanel({ force: true })
-      .then((opened) => sendResponse({ ok: opened, loggedIn: isWhatsAppLoggedIn() }))
-      .catch((error) => sendResponse({ ok: false, error: error.message || "Falha ao abrir painel" }));
-    return true;
-  });
+  }
 
   window.addEventListener("hashchange", () => {
     applyAutofillFromUrl()
@@ -1209,11 +1336,11 @@
         }
         return false;
       })
-      .catch((error) => console.warn("Failed to apply URL autofill", error));
+      .catch((error) => warnIfActiveContext("Failed to apply URL autofill", error));
   });
 
   applyAutofillFromUrl().catch((error) => {
-    console.warn("Failed to store URL autofill values", error);
+    warnIfActiveContext("Failed to store URL autofill values", error);
   });
   observeLoginState();
   startInitialLoginPolling();

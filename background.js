@@ -229,7 +229,9 @@ function limitHistoryAnchors(history, limit = IMPORT_HISTORY_CHAT_LIMIT) {
     }
   }
 
-  const chats = Array.from(chatByJid.values());
+  const chats = Array.from(chatByJid.values()).filter((chat) =>
+    [chat.jid, chat.lid].filter(Boolean).some((chatKey) => messagesByChat.has(chatKey))
+  );
   chats.sort((left, right) => {
     const leftMessage = latestMessageByChat.get(left.jid) || latestMessageByChat.get(left.lid);
     const rightMessage = latestMessageByChat.get(right.jid) || latestMessageByChat.get(right.lid);
@@ -686,6 +688,9 @@ function extractWhatsAppWebSidecarDump() {
     chats: Number.POSITIVE_INFINITY,
     messages: 50000,
     messageScan: 250000,
+    storeMessagesPerChat: 200,
+    storeLoadEarlierRounds: 2,
+    storeLoadEarlierChats: 50,
     historyChats: Number.POSITIVE_INFINITY
   };
 
@@ -1051,21 +1056,35 @@ function extractWhatsAppWebSidecarDump() {
     return Array.from(names).filter((name) => !MESSAGE_TEXT_EXCLUDED_FIELDS.has(name));
   }
 
+  const serializedObjectViewCache = new WeakMap();
+
   function serializedObjectView(value) {
     if (!value || typeof value !== "object") {
       return null;
     }
-    for (const method of ["toJSON", "toObject"]) {
+    if (serializedObjectViewCache.has(value)) {
+      return serializedObjectViewCache.get(value);
+    }
+    for (const method of ["serialize", "toJSON", "toObject"]) {
       if (typeof value[method] !== "function") {
         continue;
       }
       try {
         const converted = value[method]();
         if (converted && converted !== value && typeof converted === "object") {
+          serializedObjectViewCache.set(value, converted);
           return converted;
         }
       } catch {}
     }
+    for (const key of ["attributes", "_attributes"]) {
+      const converted = safeGetField(value, key);
+      if (converted && converted !== value && typeof converted === "object") {
+        serializedObjectViewCache.set(value, converted);
+        return converted;
+      }
+    }
+    serializedObjectViewCache.set(value, null);
     return null;
   }
 
@@ -1149,19 +1168,19 @@ function extractWhatsAppWebSidecarDump() {
   }
 
   function mapChat(row) {
-    const jid = jidToString(row.id);
+    const jid = jidToString(firstWhatsAppFieldValue(row, ["id", "wid"]));
     if (!jid) {
       return null;
     }
     return compactObject({
       jid,
-      lid: jidToString(row.accountLid),
-      name: text(row.name || row.formattedTitle),
+      lid: jidToString(firstWhatsAppFieldValue(row, ["accountLid", "lid"])),
+      name: text(firstWhatsAppFieldValue(row, ["name", "formattedTitle", "displayName"])),
       isGroup: jid.endsWith("@g.us"),
-      archived: Boolean(row.archive),
-      pinned: Boolean(row.pin),
-      mutedUntilMs: timestampMs(row.muteExpiration),
-      lastMessageTimestampMs: timestampMs(row.t)
+      archived: Boolean(firstWhatsAppFieldValue(row, ["archive", "archived"])),
+      pinned: Boolean(firstWhatsAppFieldValue(row, ["pin", "pinned"])),
+      mutedUntilMs: timestampMs(firstWhatsAppFieldValue(row, ["muteExpiration", "muteExpirationMs"])),
+      lastMessageTimestampMs: timestampMs(firstWhatsAppFieldValue(row, ["t", "timestamp", "lastReceivedKeyTimestamp"]))
     });
   }
 
@@ -1207,7 +1226,9 @@ function extractWhatsAppWebSidecarDump() {
     if (!message || typeof message !== "object") {
       return {};
     }
-    return message.key || message.id || message.msgKey || {};
+    const converted = serializedObjectView(message);
+    return message.key || message.id || message.msgKey ||
+      converted?.key || converted?.id || converted?.msgKey || {};
   }
 
   function unwrapMessagePayload(value) {
@@ -1561,6 +1582,160 @@ function extractWhatsAppWebSidecarDump() {
     return undefined;
   }
 
+  function fieldNameAliases(names) {
+    const aliases = [];
+    for (const name of names) {
+      if (!name) {
+        continue;
+      }
+      aliases.push(name, `__x_${name}`, `_${name}`);
+      if (name.length <= 3) {
+        aliases.push(name.toUpperCase());
+      }
+      if (name.charAt(0) === name.charAt(0).toLowerCase()) {
+        aliases.push(name.charAt(0).toUpperCase() + name.slice(1));
+      }
+    }
+    return aliases;
+  }
+
+  function firstWhatsAppFieldValue(value, names) {
+    return firstObjectFieldValue(value, fieldNameAliases(names));
+  }
+
+  function mediaDataFromSerializedMessage(message) {
+    return firstWhatsAppFieldValue(message, ["mediaData"]);
+  }
+
+  function firstMessageValue(row, serializedMessage, mediaData, names) {
+    const mediaObject = firstWhatsAppFieldValue(serializedMessage, ["mediaObject"]);
+    return firstContentValue(
+      firstWhatsAppFieldValue(row, names),
+      firstWhatsAppFieldValue(serializedMessage, names),
+      firstWhatsAppFieldValue(mediaData, names),
+      firstWhatsAppFieldValue(mediaObject, names)
+    );
+  }
+
+  function collectionModels(collection) {
+    if (!collection) {
+      return [];
+    }
+    for (const method of ["getModelsArray", "toArray"]) {
+      if (typeof collection[method] !== "function") {
+        continue;
+      }
+      try {
+        const models = collection[method]();
+        if (Array.isArray(models)) {
+          return models.filter((item) => item && typeof item === "object");
+        }
+      } catch {}
+    }
+    for (const key of ["models", "_models"]) {
+      const models = safeGetField(collection, key);
+      if (Array.isArray(models)) {
+        return models.filter((item) => item && typeof item === "object");
+      }
+      if (models && typeof models === "object") {
+        return Object.values(models).filter((item) => item && typeof item === "object");
+      }
+    }
+    return [];
+  }
+
+  function uniqueModelsByMessageKey(models, messageGetters) {
+    const byKey = new Map();
+    for (const model of Array.isArray(models) ? models : []) {
+      const mapped = mapMessage({}, model, messageGetters);
+      const key = `${text(mapped?.chatJid)}\u0000${text(mapped?.id)}`;
+      if (key === "\u0000" || byKey.has(key)) {
+        continue;
+      }
+      byKey.set(key, model);
+    }
+    return Array.from(byKey.values());
+  }
+
+  function readStoreChatModels(limit) {
+    const collections = getWaModule("WAWebCollections");
+    const sources = [
+      collections?.Chat,
+      collections?.ChatCollection,
+      globalThis.Store?.Chat
+    ];
+    const byJid = new Map();
+    for (const source of sources) {
+      for (const chat of collectionModels(source)) {
+        const mapped = mapChat(chat);
+        const jid = text(mapped?.jid);
+        if (!jid || byJid.has(jid)) {
+          continue;
+        }
+        byJid.set(jid, chat);
+      }
+    }
+    const chats = Array.from(byJid.values());
+    chats.sort((left, right) => timestampMs(firstWhatsAppFieldValue(right, ["t", "timestamp"])) - timestampMs(firstWhatsAppFieldValue(left, ["t", "timestamp"])));
+    return chats.slice(0, Number.isFinite(limit) ? Math.max(0, limit) : chats.length);
+  }
+
+  async function loadEarlierMessagesForChat(chat) {
+    const loader = getWaModule("WAWebChatLoadMessages");
+    try {
+      if (loader && typeof loader.loadEarlierMsgs === "function") {
+        const loaded = await loader.loadEarlierMsgs({ chat });
+        return Array.isArray(loaded) ? loaded : [];
+      }
+    } catch {}
+    try {
+      if (typeof chat?.loadEarlierMsgs === "function") {
+        const loaded = await chat.loadEarlierMsgs();
+        return Array.isArray(loaded) ? loaded : [];
+      }
+    } catch {}
+    return [];
+  }
+
+  async function readStoreMessageModels(chatModels, messageGetters, totalLimit, perChatLimit, loadEarlierRounds, maxLoadEarlierChats) {
+    const models = [];
+    const appendModels = (items) => {
+      for (const item of Array.isArray(items) ? items : []) {
+        if (models.length >= totalLimit) {
+          return;
+        }
+        if (item && typeof item === "object") {
+          models.push(item);
+        }
+      }
+    };
+
+    const chats = Array.isArray(chatModels) ? chatModels : [];
+    for (let chatIndex = 0; chatIndex < chats.length; chatIndex += 1) {
+      const chat = chats[chatIndex];
+      if (models.length >= totalLimit) {
+        break;
+      }
+      const messageCollection = safeGetField(chat, "msgs");
+      appendModels(collectionModels(messageCollection).slice(-perChatLimit));
+      if (chatIndex >= maxLoadEarlierChats) {
+        continue;
+      }
+      for (let round = 0; round < loadEarlierRounds && models.length < totalLimit; round += 1) {
+        if (messageCollection?.msgLoadState?.noEarlierMsgs) {
+          break;
+        }
+        const loaded = await loadEarlierMessagesForChat(chat);
+        if (!loaded.length) {
+          break;
+        }
+        appendModels(loaded.slice(-perChatLimit));
+      }
+    }
+
+    return uniqueModelsByMessageKey(models, messageGetters);
+  }
+
   function jidListFromValue(value) {
     if (!value) {
       return [];
@@ -1707,60 +1882,103 @@ function extractWhatsAppWebSidecarDump() {
   function mapMessage(row, serializedMessage = null, messageGetters = null) {
     const key = serializedMessageKey(serializedMessage);
     const getterId = messageGetterValue(messageGetters, "getId", serializedMessage);
-    const id = messageIDToString(row.id) ||
-      messageIDToString(row.messageId) ||
-      text(row.externalId) ||
-      text(row.internalId) ||
+    const rowID = firstWhatsAppFieldValue(row, ["id"]);
+    const serializedID = firstWhatsAppFieldValue(serializedMessage, ["id"]);
+    const mediaData = mediaDataFromSerializedMessage(serializedMessage);
+    const id = messageIDToString(rowID) ||
+      messageIDToString(firstWhatsAppFieldValue(row, ["messageId"])) ||
+      text(firstWhatsAppFieldValue(row, ["externalId"])) ||
+      text(firstWhatsAppFieldValue(row, ["internalId"])) ||
       text(key.id) ||
+      messageIDToString(serializedID) ||
       messageIDToString(getterId);
-    const fromMe = row.id && typeof row.id === "object" && typeof row.id.fromMe === "boolean"
-      ? row.id.fromMe
-      : typeof row.id === "string"
-        ? row.id.startsWith("true_")
+    const fromMe = rowID && typeof rowID === "object" && typeof rowID.fromMe === "boolean"
+      ? rowID.fromMe
+      : typeof rowID === "string"
+        ? rowID.startsWith("true_")
         : typeof key.fromMe === "boolean"
           ? key.fromMe
-          : Boolean(row.fromMe);
-    const chatJid = jidToString(row.chatId || (row.id && row.id.remote)) ||
+          : Boolean(firstWhatsAppFieldValue(row, ["fromMe"]) || firstWhatsAppFieldValue(serializedMessage, ["fromMe", "isMe"]));
+    const chatJid = jidToString(firstWhatsAppFieldValue(row, ["chatId"]) || (rowID && rowID.remote)) ||
       jidToString(key.remoteJid || key.remote) ||
+      jidToString(firstWhatsAppFieldValue(serializedMessage, ["chatId", "remoteJid", "remote"])) ||
       jidToString(messageGetterValue(messageGetters, "getRemote", serializedMessage)) ||
-      messageChatJIDFromID(row.id) ||
-      (fromMe ? jidToString(row.to || row.from) : jidToString(row.from || row.to));
+      messageChatJIDFromID(rowID) ||
+      messageChatJIDFromID(serializedID) ||
+      (fromMe
+        ? jidToString(firstWhatsAppFieldValue(row, ["to", "from"]) || firstWhatsAppFieldValue(serializedMessage, ["to", "from"]))
+        : jidToString(firstWhatsAppFieldValue(row, ["from", "to"]) || firstWhatsAppFieldValue(serializedMessage, ["from", "to"])));
     if (!id || !chatJid || isFilteredHistoryChatJID(chatJid)) {
       return null;
     }
-    if (isNonZeroMessageStubType(row.messageStubType, serializedMessage?.messageStubType, serializedMessage?.stubType)) {
+    if (isNonZeroMessageStubType(firstWhatsAppFieldValue(row, ["messageStubType", "stubType"]), firstWhatsAppFieldValue(serializedMessage, ["messageStubType", "stubType"]))) {
       return null;
     }
     const mediaMessage = mediaMessageFromPayload(serializedMessage && (serializedMessage.message || serializedMessage.msg || serializedMessage._message));
-    const senderJid = jidToString(row.author || row.sender || (row.id && row.id.participant) || key.participant || serializedMessage?.author || messageGetterValue(messageGetters, "getSender", serializedMessage) || messageGetterValue(messageGetters, "getAuthor", serializedMessage) || row.from);
+    const senderJid = jidToString(
+      firstWhatsAppFieldValue(row, ["author", "sender"]) ||
+      (rowID && rowID.participant) ||
+      key.participant ||
+      firstWhatsAppFieldValue(serializedMessage, ["author", "sender"]) ||
+      messageGetterValue(messageGetters, "getSender", serializedMessage) ||
+      messageGetterValue(messageGetters, "getAuthor", serializedMessage) ||
+      firstWhatsAppFieldValue(row, ["from"]) ||
+      firstWhatsAppFieldValue(serializedMessage, ["from"])
+    );
     const getterText = messageGetterText(messageGetters, serializedMessage, ["getBody", "getCaption", "getTitle", "getComment", "getPollName", "getEventName", "getEventDescription"]);
-    const messageText = firstText(row.body, row.caption, row.text) || getterText || textFromSerializedMessage(serializedMessage) || textFromKnownFields(row);
+    const messageText = firstText(
+      firstWhatsAppFieldValue(row, ["body", "caption", "text"]),
+      firstWhatsAppFieldValue(serializedMessage, ["body", "caption", "text", "pollName", "eventName", "eventDescription"]),
+      getterText
+    ) || textFromSerializedMessage(serializedMessage) || textFromKnownFields(row);
     const contextInfo = contextInfoFromMessage(row, serializedMessage, messageGetters, chatJid);
-    const rawType = text(row.type) || text(messageGetterValue(messageGetters, "getType", serializedMessage));
+    const rawType = text(firstWhatsAppFieldValue(row, ["type"])) ||
+      text(firstWhatsAppFieldValue(serializedMessage, ["type"])) ||
+      text(firstWhatsAppFieldValue(mediaData, ["type"])) ||
+      text(messageGetterValue(messageGetters, "getType", serializedMessage));
     const messageType = storedMessageTypeFromWebType(rawType, Boolean(contextInfo));
     if (!EXPORTABLE_MESSAGE_TYPES.has(messageType)) {
       return null;
     }
-    const ack = firstContentValue(row.ack, messageGetterValue(messageGetters, "getAck", serializedMessage));
+    const ack = firstContentValue(firstWhatsAppFieldValue(row, ["ack"]), firstWhatsAppFieldValue(serializedMessage, ["ack"]), messageGetterValue(messageGetters, "getAck", serializedMessage));
     const mediaContent = compactObject({
-      URL: firstContentValue(row.deprecatedMms3Url, messageGetterValue(messageGetters, "getDeprecatedMms3Url", serializedMessage), mediaMessage.url),
-      mimetype: firstContentValue(row.mimetype, messageGetterValue(messageGetters, "getMimetype", serializedMessage), mediaMessage.mimetype),
-      fileSHA256: firstContentValue(row.filehash, messageGetterValue(messageGetters, "getFilehash", serializedMessage), mediaMessage.fileSha256, mediaMessage.filehash),
-      mediaKey: firstContentValue(row.mediaKey, mediaMessage.mediaKey),
-      fileLength: firstContentValue(row.size, mediaMessage.fileLength, mediaMessage.size),
-      seconds: firstContentValue(row.duration, mediaMessage.seconds, mediaMessage.duration),
-      directPath: firstContentValue(row.directPath, mediaMessage.directPath),
-      title: firstContentValue(row.title, mediaMessage.title),
-      fileName: firstContentValue(row.fileName, row.filename, mediaMessage.fileName),
-      pageCount: firstContentValue(row.pageCount, mediaMessage.pageCount)
+      body: firstContentValue(firstMessageValue(row, serializedMessage, mediaData, ["body"]), mediaMessage.body),
+      text: firstContentValue(firstMessageValue(row, serializedMessage, mediaData, ["text"]), mediaMessage.text),
+      caption: firstContentValue(firstMessageValue(row, serializedMessage, mediaData, ["caption"]), mediaMessage.caption),
+      URL: firstContentValue(firstMessageValue(row, serializedMessage, mediaData, ["deprecatedMms3Url", "url", "URL"]), messageGetterValue(messageGetters, "getDeprecatedMms3Url", serializedMessage), mediaMessage.url),
+      mimetype: firstContentValue(firstMessageValue(row, serializedMessage, mediaData, ["mimetype", "mimeType"]), messageGetterValue(messageGetters, "getMimetype", serializedMessage), mediaMessage.mimetype),
+      fileSHA256: firstContentValue(firstMessageValue(row, serializedMessage, mediaData, ["fileSHA256", "fileSha256", "filehash", "fileHash"]), messageGetterValue(messageGetters, "getFilehash", serializedMessage), mediaMessage.fileSHA256, mediaMessage.fileSha256, mediaMessage.filehash),
+      fileEncSHA256: firstContentValue(firstMessageValue(row, serializedMessage, mediaData, ["fileEncSHA256", "fileEncSha256", "fileEncHash", "encFilehash", "encFileHash"]), mediaMessage.fileEncSHA256, mediaMessage.fileEncSha256, mediaMessage.fileEncHash),
+      mediaKey: firstContentValue(firstMessageValue(row, serializedMessage, mediaData, ["mediaKey"]), mediaMessage.mediaKey),
+      fileLength: firstContentValue(firstMessageValue(row, serializedMessage, mediaData, ["fileLength", "size"]), mediaMessage.fileLength, mediaMessage.size),
+      seconds: firstContentValue(firstMessageValue(row, serializedMessage, mediaData, ["seconds", "duration"]), mediaMessage.seconds, mediaMessage.duration),
+      directPath: firstContentValue(firstMessageValue(row, serializedMessage, mediaData, ["directPath"]), mediaMessage.directPath),
+      mediaKeyTimestamp: firstContentValue(firstMessageValue(row, serializedMessage, mediaData, ["mediaKeyTimestamp", "mediaKeyTimestampMs"]), mediaMessage.mediaKeyTimestamp),
+      thumbnail: firstContentValue(firstMessageValue(row, serializedMessage, mediaData, ["thumbnail"]), mediaMessage.thumbnail),
+      JPEGThumbnail: firstContentValue(firstMessageValue(row, serializedMessage, mediaData, ["JPEGThumbnail", "jpegThumbnail"]), mediaMessage.JPEGThumbnail, mediaMessage.jpegThumbnail),
+      thumbnailDirectPath: firstContentValue(firstMessageValue(row, serializedMessage, mediaData, ["thumbnailDirectPath"]), mediaMessage.thumbnailDirectPath),
+      thumbnailSHA256: firstContentValue(firstMessageValue(row, serializedMessage, mediaData, ["thumbnailSHA256", "thumbnailSha256"]), mediaMessage.thumbnailSHA256, mediaMessage.thumbnailSha256),
+      thumbnailEncSHA256: firstContentValue(firstMessageValue(row, serializedMessage, mediaData, ["thumbnailEncSHA256", "thumbnailEncSha256"]), mediaMessage.thumbnailEncSHA256, mediaMessage.thumbnailEncSha256),
+      thumbnailHeight: firstContentValue(firstMessageValue(row, serializedMessage, mediaData, ["thumbnailHeight"]), mediaMessage.thumbnailHeight),
+      thumbnailWidth: firstContentValue(firstMessageValue(row, serializedMessage, mediaData, ["thumbnailWidth"]), mediaMessage.thumbnailWidth),
+      pngThumbnail: firstContentValue(firstMessageValue(row, serializedMessage, mediaData, ["pngThumbnail"]), mediaMessage.pngThumbnail),
+      waveform: firstContentValue(firstMessageValue(row, serializedMessage, mediaData, ["waveform"]), mediaMessage.waveform),
+      title: firstContentValue(firstMessageValue(row, serializedMessage, mediaData, ["title"]), mediaMessage.title),
+      fileName: firstContentValue(firstMessageValue(row, serializedMessage, mediaData, ["fileName", "filename"]), mediaMessage.fileName),
+      pageCount: firstContentValue(firstMessageValue(row, serializedMessage, mediaData, ["pageCount"]), mediaMessage.pageCount)
     });
     const content = messageContentForStoredType(messageType, messageText, mediaContent, contextInfo, rawType);
+    const messageTimestampMs = timestampMs(firstDefined(
+      firstWhatsAppFieldValue(row, ["t", "timestamp", "messageTimestamp"]),
+      messageGetterValue(messageGetters, "getT", serializedMessage),
+      firstWhatsAppFieldValue(serializedMessage, ["t", "timestamp", "messageTimestamp"])
+    ));
     const webMessage = webMessageFromStoredContent({
       id,
       chatJid,
       senderJid,
       fromMe,
-      timestampMs: timestampMs(firstDefined(row.t, messageGetterValue(messageGetters, "getT", serializedMessage), serializedMessage?.messageTimestamp, serializedMessage?.timestamp)),
+      timestampMs: messageTimestampMs,
       messageType,
       content,
       ack
@@ -1773,7 +1991,7 @@ function extractWhatsAppWebSidecarDump() {
       chatJid,
       senderJid,
       fromMe,
-      timestampMs: timestampMs(firstDefined(row.t, messageGetterValue(messageGetters, "getT", serializedMessage), serializedMessage?.messageTimestamp, serializedMessage?.timestamp)),
+      timestampMs: messageTimestampMs,
       type: messageType,
       text: messageText,
       content,
@@ -1792,6 +2010,29 @@ function extractWhatsAppWebSidecarDump() {
       return rightTimestamp - leftTimestamp;
     });
     return out.slice(0, Math.max(0, limit));
+  }
+
+  function mergeChatsByJid(...chatLists) {
+    const byJid = new Map();
+    for (const chat of chatLists.flat()) {
+      const jid = text(chat?.jid);
+      if (!jid) {
+        continue;
+      }
+      const existing = byJid.get(jid);
+      if (!existing) {
+        byJid.set(jid, chat);
+        continue;
+      }
+      byJid.set(jid, {
+        ...existing,
+        ...chat,
+        name: text(chat.name) || text(existing.name),
+        lid: text(chat.lid) || text(existing.lid),
+        lastMessageTimestampMs: Math.max(timestampMs(existing.lastMessageTimestampMs), timestampMs(chat.lastMessageTimestampMs))
+      });
+    }
+    return Array.from(byJid.values());
   }
 
   function messageTimestampIndexName(store) {
@@ -1924,7 +2165,9 @@ function extractWhatsAppWebSidecarDump() {
       }
     }
 
-    const chats = Array.from(chatByJid.values());
+    const chats = Array.from(chatByJid.values()).filter((chat) =>
+      [chat.jid, chat.lid].filter(Boolean).some((chatKey) => messagesByChat.has(chatKey))
+    );
     chats.sort((left, right) => {
       const leftMessage = latestMessageByChat.get(left.jid) || latestMessageByChat.get(left.lid);
       const rightMessage = latestMessageByChat.get(right.jid) || latestMessageByChat.get(right.lid);
@@ -1954,9 +2197,14 @@ function extractWhatsAppWebSidecarDump() {
   async function run() {
     const contactRows = await readStore("model-storage", "contact", LIMITS.contacts);
     const chatRows = await readStore("model-storage", "chat", LIMITS.chats);
+    const messageSerializer = getWaModule("WAWebDBMessageSerialization");
+    const messageGetters = getWaModule("WAWebMsgGetters");
+    const storeChatModels = readStoreChatModels(LIMITS.historyChats);
 
     const contacts = contactRows.map(mapContact).filter(Boolean);
-    const chats = chatRows.map(mapChat).filter(Boolean);
+    const dbChats = chatRows.map(mapChat).filter(Boolean);
+    const storeChats = storeChatModels.map(mapChat).filter(Boolean);
+    const chats = mergeChatsByJid(dbChats, storeChats);
     const recentChats = selectRecentHistoryChats(chats, LIMITS.historyChats);
     const messageRows = await readRecentMessageRowsForChats(
       "model-storage",
@@ -1965,10 +2213,16 @@ function extractWhatsAppWebSidecarDump() {
       LIMITS.messages,
       LIMITS.messageScan
     );
-    const messageSerializer = getWaModule("WAWebDBMessageSerialization");
-    const messageGetters = getWaModule("WAWebMsgGetters");
     let serializedMessageRows = 0;
     let serializedMessageRowsWithText = 0;
+    const storeMessageModels = await readStoreMessageModels(
+      storeChatModels,
+      messageGetters,
+      LIMITS.messages,
+      LIMITS.storeMessagesPerChat,
+      LIMITS.storeLoadEarlierRounds,
+      LIMITS.storeLoadEarlierChats
+    );
     const decryptedMessageModels = await readDecryptedMessageModels(messageRows, messageSerializer, messageGetters, LIMITS.messages);
     const messageByKey = new Map();
     const addMessage = (mapped) => {
@@ -1981,6 +2235,9 @@ function extractWhatsAppWebSidecarDump() {
         messageByKey.set(key, mapped);
       }
     };
+    for (const model of storeMessageModels) {
+      addMessage(mapMessage({}, model, messageGetters));
+    }
     for (const model of decryptedMessageModels) {
       addMessage(mapMessage({}, model, messageGetters));
     }
@@ -2013,7 +2270,9 @@ function extractWhatsAppWebSidecarDump() {
       counts: {
         contactRows: contactRows.length,
         chatRows: chatRows.length,
+        storeChatModels: storeChatModels.length,
         messageRows: messageRows.length,
+        storeMessageModels: storeMessageModels.length,
         messageRowsSerialized: serializedMessageRows,
         messageRowsSerializedWithText: serializedMessageRowsWithText,
         messageRowsDecrypted: decryptedMessageModels.length,
