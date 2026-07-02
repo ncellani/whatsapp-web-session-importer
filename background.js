@@ -169,6 +169,162 @@ function normalizeHistoryTimestampMs(value) {
   return numeric < 100000000000 ? Math.floor(numeric * 1000) : Math.floor(numeric);
 }
 
+function normalizeHistoryJID(value) {
+  if (!value) {
+    return "";
+  }
+  let raw = "";
+  if (typeof value === "string") {
+    raw = value;
+  } else if (typeof value === "object") {
+    if (typeof value._serialized === "string") {
+      raw = value._serialized;
+    } else if (typeof value.user === "string" && typeof value.server === "string") {
+      raw = `${value.user}@${value.server}`;
+    } else if (typeof value.toString === "function" && value.toString !== Object.prototype.toString) {
+      const serialized = value.toString();
+      if (typeof serialized === "string" && serialized.includes("@")) {
+        raw = serialized;
+      }
+    }
+  }
+  const trimmed = String(raw || "").trim();
+  const at = trimmed.lastIndexOf("@");
+  if (at < 0) {
+    return trimmed;
+  }
+  const server = trimmed.slice(at + 1);
+  if (server === "c.us") {
+    return `${trimmed.slice(0, at)}@s.whatsapp.net`;
+  }
+  return trimmed;
+}
+
+function historyJIDIdentityKey(value) {
+  const jid = normalizeHistoryJID(value);
+  const at = jid.lastIndexOf("@");
+  if (at < 0) {
+    return jid;
+  }
+  const server = jid.slice(at + 1);
+  const user = jid.slice(0, at).replace(/:.+$/, "");
+  return `${user}@${server}`;
+}
+
+function historyJIDMatchesAny(value, candidates) {
+  const key = historyJIDIdentityKey(value);
+  if (!key) {
+    return false;
+  }
+  return candidates.some((candidate) => key === historyJIDIdentityKey(candidate));
+}
+
+function isPrivateHistoryJID(value) {
+  const jid = normalizeHistoryJID(value);
+  return jid.endsWith("@s.whatsapp.net") || jid.endsWith("@c.us") || jid.endsWith("@lid");
+}
+
+function historyBoolean(value) {
+  return value === true || value === "true" || value === 1;
+}
+
+function historyPeerJIDFromEndpoints({ fromMe, fromJid, toJid, ownerJids }) {
+  const from = normalizeHistoryJID(fromJid);
+  const to = normalizeHistoryJID(toJid);
+  const owners = (Array.isArray(ownerJids) ? ownerJids : []).map(normalizeHistoryJID).filter(Boolean);
+  if (owners.length > 0) {
+    const fromIsOwner = historyJIDMatchesAny(from, owners);
+    const toIsOwner = historyJIDMatchesAny(to, owners);
+    if (fromIsOwner && to && !toIsOwner) {
+      return to;
+    }
+    if (toIsOwner && from && !fromIsOwner) {
+      return from;
+    }
+  }
+  return historyBoolean(fromMe) ? (to || from) : (from || to);
+}
+
+function repairedHistoryWebMessage(message, chatJid, senderJid) {
+  const webMessage = message?.webMessage;
+  if (!webMessage || typeof webMessage !== "object" || Array.isArray(webMessage)) {
+    return webMessage;
+  }
+  const output = { ...webMessage };
+  const key = webMessage.key && typeof webMessage.key === "object" && !Array.isArray(webMessage.key)
+    ? { ...webMessage.key }
+    : {};
+  if (Object.keys(key).length > 0) {
+    key.remoteJID = chatJid;
+    key.fromMe = historyBoolean(message.fromMe);
+    if (message.id) {
+      key.ID = message.id;
+    }
+    if (chatJid.endsWith("@g.us") && senderJid) {
+      key.participant = senderJid;
+    } else {
+      delete key.participant;
+    }
+    output.key = key;
+  }
+  if (chatJid.endsWith("@g.us") && senderJid) {
+    output.participant = senderJid;
+  } else {
+    delete output.participant;
+  }
+  return output;
+}
+
+function repairHistoryPeerJids(history, ownerJids) {
+  if (!history || typeof history !== "object") {
+    return history;
+  }
+  const owners = (Array.isArray(ownerJids) ? ownerJids : [ownerJids]).map(normalizeHistoryJID).filter(Boolean);
+  if (owners.length === 0) {
+    return history;
+  }
+  const messages = (Array.isArray(history.messages) ? history.messages : []).map((message) => {
+    if (!message || typeof message !== "object") {
+      return message;
+    }
+    const sourceFromJid = normalizeHistoryJID(message._sourceFromJid || message.sourceFromJid);
+    const sourceToJid = normalizeHistoryJID(message._sourceToJid || message.sourceToJid);
+    const fromMe = historyBoolean(message.fromMe);
+    const peerJid = historyPeerJIDFromEndpoints({
+      fromMe,
+      fromJid: sourceFromJid,
+      toJid: sourceToJid,
+      ownerJids: owners
+    });
+    let chatJid = normalizeHistoryJID(message.chatJid);
+    const shouldUsePeer = peerJid &&
+      !historyJIDMatchesAny(peerJid, owners) &&
+      (!chatJid || historyJIDMatchesAny(chatJid, owners));
+    if (shouldUsePeer) {
+      chatJid = peerJid;
+    }
+
+    let senderJid = normalizeHistoryJID(message.senderJid);
+    if (!fromMe && isPrivateHistoryJID(chatJid) && (!senderJid || historyJIDMatchesAny(senderJid, owners))) {
+      senderJid = chatJid;
+    }
+
+    const repaired = {
+      ...message,
+      chatJid,
+      senderJid,
+      fromMe,
+      webMessage: repairedHistoryWebMessage({ ...message, chatJid, senderJid, fromMe }, chatJid, senderJid)
+    };
+    delete repaired._sourceFromJid;
+    delete repaired._sourceToJid;
+    delete repaired.sourceFromJid;
+    delete repaired.sourceToJid;
+    return repaired;
+  });
+  return { ...history, messages };
+}
+
 function limitHistoryAnchors(history, limit = IMPORT_HISTORY_CHAT_LIMIT) {
   if (!history || typeof history !== "object") {
     return history;
@@ -371,7 +527,11 @@ function attachSidecarPayload(whatsmeowPayload, sidecar, waWebDump) {
 
   const history = firstDefined(...sources.map((source) => source.history));
   if (history && typeof history === "object") {
-    output.history = limitHistoryAnchors(history);
+    output.history = limitHistoryAnchors(repairHistoryPeerJids(history, [
+      output.device?.meJid,
+      output.device?.meLid,
+      ...sources.flatMap((source) => [source.device?.meJid, source.device?.meLid])
+    ]));
   }
 
   const nctSalt = firstDefined(...sources.map((source) => source.nctSalt));
@@ -1899,15 +2059,17 @@ function extractWhatsAppWebSidecarDump() {
         : typeof key.fromMe === "boolean"
           ? key.fromMe
           : Boolean(firstWhatsAppFieldValue(row, ["fromMe"]) || firstWhatsAppFieldValue(serializedMessage, ["fromMe", "isMe"]));
+    const sourceFromJid = jidToString(firstWhatsAppFieldValue(row, ["from"])) ||
+      jidToString(firstWhatsAppFieldValue(serializedMessage, ["from"]));
+    const sourceToJid = jidToString(firstWhatsAppFieldValue(row, ["to"])) ||
+      jidToString(firstWhatsAppFieldValue(serializedMessage, ["to"]));
     const chatJid = jidToString(firstWhatsAppFieldValue(row, ["chatId"]) || (rowID && rowID.remote)) ||
       jidToString(key.remoteJid || key.remote) ||
       jidToString(firstWhatsAppFieldValue(serializedMessage, ["chatId", "remoteJid", "remote"])) ||
       jidToString(messageGetterValue(messageGetters, "getRemote", serializedMessage)) ||
       messageChatJIDFromID(rowID) ||
       messageChatJIDFromID(serializedID) ||
-      (fromMe
-        ? jidToString(firstWhatsAppFieldValue(row, ["to", "from"]) || firstWhatsAppFieldValue(serializedMessage, ["to", "from"]))
-        : jidToString(firstWhatsAppFieldValue(row, ["from", "to"]) || firstWhatsAppFieldValue(serializedMessage, ["from", "to"])));
+      (fromMe ? (sourceToJid || sourceFromJid) : (sourceFromJid || sourceToJid));
     if (!id || !chatJid || isFilteredHistoryChatJID(chatJid)) {
       return null;
     }
@@ -1922,8 +2084,7 @@ function extractWhatsAppWebSidecarDump() {
       firstWhatsAppFieldValue(serializedMessage, ["author", "sender"]) ||
       messageGetterValue(messageGetters, "getSender", serializedMessage) ||
       messageGetterValue(messageGetters, "getAuthor", serializedMessage) ||
-      firstWhatsAppFieldValue(row, ["from"]) ||
-      firstWhatsAppFieldValue(serializedMessage, ["from"])
+      sourceFromJid
     );
     const getterText = messageGetterText(messageGetters, serializedMessage, ["getBody", "getCaption", "getTitle", "getComment", "getPollName", "getEventName", "getEventDescription"]);
     const messageText = firstText(
@@ -1995,7 +2156,9 @@ function extractWhatsAppWebSidecarDump() {
       type: messageType,
       text: messageText,
       content,
-      webMessage
+      webMessage,
+      _sourceFromJid: sourceFromJid,
+      _sourceToJid: sourceToJid
     });
   }
 
@@ -2085,8 +2248,10 @@ function extractWhatsAppWebSidecarDump() {
           }
           scanned += 1;
           const mapped = mapMessage(cursor.value);
-          const chatJid = text(mapped?.chatJid);
-          if (chatJid && targetChats.has(chatJid)) {
+          const chatJid = [mapped?.chatJid, mapped?._sourceFromJid, mapped?._sourceToJid]
+            .map(text)
+            .find((candidate) => targetChats.has(candidate));
+          if (chatJid) {
             const messageKey = `${chatJid}\u0000${text(mapped.id)}`;
             if (!selectedByKey.has(messageKey)) {
               selectedByKey.set(messageKey, { row: cursor.value, message: mapped });
@@ -3054,9 +3219,11 @@ async function runFloatingImport(tab, options, onStatus) {
 
   runningImports.add(tab.id);
   try {
+    const settings = await chrome.storage.local.get(["devMode"]);
+    const devMode = settings.devMode === true;
     const client = String(options?.client || "").trim();
     const token = String(options?.token || "").trim();
-    const includeHistory = options?.includeHistory !== false;
+    const includeHistory = devMode && options?.includeHistory === true;
     const disconnectLocal = options?.disconnectLocal !== false;
     if (!client || !token) {
       throw new Error("Informe cliente e token da instância");

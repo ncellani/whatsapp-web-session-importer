@@ -887,8 +887,8 @@
               </button>
             </span>
           </label>
-          <label class="check">
-            <input id="includeHistoryCheckbox" type="checkbox" checked />
+          <label id="includeHistoryOption" class="check dev-only" hidden>
+            <input id="includeHistoryCheckbox" type="checkbox" />
             <span>Incluir histórico de mensagens (beta)</span>
           </label>
           <label id="disconnectLocalOption" class="check dev-only" hidden>
@@ -950,7 +950,8 @@
     ]) {
       const element = panelEl(id);
       if (element) {
-        element.disabled = state.importRunning || (element.classList.contains("dev-only") && !state.devMode);
+        const devOnly = element.classList.contains("dev-only") || Boolean(element.closest?.(".dev-only"));
+        element.disabled = state.importRunning || (devOnly && !state.devMode);
       }
     }
   }
@@ -966,6 +967,11 @@
   function shouldDisconnectLocalAfterImport() {
     const checkbox = panelEl("disconnectLocalCheckbox");
     return !state.devMode || checkbox?.checked !== false;
+  }
+
+  function shouldIncludeHistoryAfterImport() {
+    const checkbox = panelEl("includeHistoryCheckbox");
+    return state.devMode && checkbox?.checked === true;
   }
 
   function renderCleanupNotice() {
@@ -991,6 +997,10 @@
     const disconnectLocalCheckbox = panelEl("disconnectLocalCheckbox");
     if (!state.devMode && disconnectLocalCheckbox) {
       disconnectLocalCheckbox.checked = true;
+    }
+    const includeHistoryCheckbox = panelEl("includeHistoryCheckbox");
+    if (!state.devMode && includeHistoryCheckbox) {
+      includeHistoryCheckbox.checked = false;
     }
     const modeLabel = panelEl("modeLabel");
     if (modeLabel) {
@@ -1051,7 +1061,7 @@
       instanceTokenInput.value = values.instanceToken || "";
     }
     if (includeHistoryCheckbox) {
-      includeHistoryCheckbox.checked = values.includeHistory !== false;
+      includeHistoryCheckbox.checked = values.devMode === true && values.includeHistory === true;
     }
     if (disconnectLocalCheckbox) {
       disconnectLocalCheckbox.checked = values.devMode === true ? values.disconnectLocal !== false : true;
@@ -1067,7 +1077,7 @@
     await storageSet({
       serverUrl: String(serverUrlInput?.value || "").trim(),
       instanceToken: String(instanceTokenInput?.value || "").trim(),
-      includeHistory: includeHistoryCheckbox?.checked !== false,
+      includeHistory: shouldIncludeHistoryAfterImport(),
       disconnectLocal: state.devMode ? disconnectLocalCheckbox?.checked !== false : true
     });
     renderCleanupNotice();
@@ -1163,7 +1173,7 @@
 
     const client = String(panelEl("serverUrlInput")?.value || "").trim();
     const token = String(panelEl("instanceTokenInput")?.value || "").trim();
-    const includeHistory = panelEl("includeHistoryCheckbox")?.checked !== false;
+    const includeHistory = shouldIncludeHistoryAfterImport();
     const disconnectLocal = shouldDisconnectLocalAfterImport();
     if (!client || !token) {
       setResult("Informe cliente e token da instância.", "error");
