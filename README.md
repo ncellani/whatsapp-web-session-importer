@@ -1,19 +1,19 @@
 # Importador de Sessão do WhatsApp Web
 
-Extensão para migrar uma sessão já conectada no WhatsApp Web para a API da Uazapi.
+Extensão para migrar uma sessão já conectada no WhatsApp Web para um backend autorizado.
 
-Esta extensão funciona apenas para instâncias Uazapi. Use somente em um computador confiável e não compartilhe o token da instância com outras pessoas.
+Use somente em um computador confiável e não compartilhe o token com outras pessoas.
 
 ## Antes de começar
 
 Você precisa ter:
 
 1. O arquivo `whatsapp-web-session-importer.zip`.
-2. O nome da assinatura da instância.
-3. O token da instância.
+2. O nome da assinatura ou a URL autorizada da instância/backend.
+3. O token de importação.
 4. Acesso ao WhatsApp que será conectado na instância.
 
-Se você recebeu um link pronto da equipe de suporte ou do painel da Uazapi, use esse link. Ele já deve vir com `client` e `token` preenchidos.
+Se você recebeu um link pronto da equipe de suporte ou do painel do SaaS, use esse link. Ele já deve vir com `client` e `token` preenchidos.
 
 ## 1. Instalar a extensão
 
@@ -65,31 +65,23 @@ https://web.whatsapp.com/#client=SERVER_URL&token=TOKEN
 
 Troque:
 
-- `SERVER_URL` pelo endereço da assinatura/instância.
-- `TOKEN` pelo token da instância.
+- `SERVER_URL` pelo nome abreviado da assinatura ou pelo endereço HTTPS autorizado da instância/backend.
+- `TOKEN` pelo token de importação.
 
-O parâmetro da URL continua se chamando `client`, mas o valor dele é o `server_url`.
-
-O `server_url` pode ser abreviado ou completo.
+O parâmetro da URL continua se chamando `client`. Ele aceita um nome abreviado ou uma URL completa.
 
 Forma abreviada:
-
-Exemplo:
 
 ```text
 https://web.whatsapp.com/#client=minhaempresa&token=550e8400-e29b-41d4-a716-446655440000
 ```
 
+Quando o valor não é uma URL completa nem um host com ponto, a extensão completa o endereço usando o domínio padrão configurado no pacote.
+
 Forma completa:
 
 ```text
-https://web.whatsapp.com/#client=https://minhaempresa.uazapi.com&token=550e8400-e29b-41d4-a716-446655440000
-```
-
-Nesse exemplo, `minhaempresa` vira:
-
-```text
-https://minhaempresa.uazapi.com
+https://web.whatsapp.com/#client=https://backend.autorizado.com&token=550e8400-e29b-41d4-a716-446655440000
 ```
 
 Não altere letras, números ou símbolos do token.
@@ -102,13 +94,13 @@ Ao abrir o WhatsApp Web com `client` e `token` na URL, o painel da extensão abr
 
 Antes de continuar:
 
-1. Confira se o campo **Cliente** mostra o nome da assinatura correto.
-2. Confira se o campo **Token da instância** está correto.
+1. Confira se o campo **Nome da assinatura** mostra o valor correto.
+2. Confira se o campo **Token** está correto.
 3. Clique em **Migrar sessão**.
 
 A extensão vai:
 
-1. Verificar a instância na API da Uazapi.
+1. Verificar a instância ou backend autorizado.
 2. Capturar a sessão conectada no WhatsApp Web.
 3. Esperar a sessão estar completa antes de enviar.
 4. Enviar a sessão para a API.
@@ -122,7 +114,7 @@ O histórico fica ligado por padrão. Se essa etapa falhar, a extensão mostra u
 
 ## 5. Depois da migração
 
-Depois que a migração terminar, acompanhe a instância na Uazapi.
+Depois que a migração terminar, acompanhe a instância no sistema autorizado.
 
 Se tudo estiver correto, a instância deve ficar conectada pela API.
 
@@ -147,7 +139,7 @@ Verifique:
 
 1. Se o nome da assinatura está correto.
 2. Se o token da instância está correto.
-3. Se a instância existe na Uazapi.
+3. Se a instância ou backend autorizado existe e aceita a importação.
 4. Se o WhatsApp Web terminou de carregar as conversas.
 5. Se a internet está funcionando.
 
@@ -165,7 +157,7 @@ Você pode configurar:
 
 Mesmo com a opção **Abrir painel automaticamente** desligada, o painel sempre abre quando a URL tiver `client` e `token`.
 
-O modo técnico continua escondido. Para abrir o modo técnico, clique 5 vezes no cabeçalho do painel.
+O modo técnico é opcional e fica reservado para diagnóstico. Para abrir o modo técnico, clique 5 vezes no cabeçalho do painel.
 
 ## O que a extensão não faz
 
