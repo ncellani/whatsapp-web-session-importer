@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "WhatsApp Session Connector",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Connects an authenticated WhatsApp Web session to your API.",
   "action": {
     "default_title": "Abrir importador"
@@ -20,6 +20,15 @@
     {
       "matches": ["https://web.whatsapp.com/*"],
       "js": ["autofill.js"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "http://localhost/*",
+        "http://127.0.0.1/*",
+        "https://*.uazapi.com/*"
+      ],
+      "js": ["app-bridge.js"],
       "run_at": "document_start"
     }
   ]
