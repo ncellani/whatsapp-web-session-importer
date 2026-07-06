@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { IMPORT_HISTORY_CHAT_LIMIT, WHATSAPP_LOGGED_IN_SELECTORS, WHATSAPP_QR_HINTS } from "../shared/config";
+import { IMPORT_HISTORY_CHAT_LIMIT, WHATSAPP_LOGGED_IN_SELECTORS } from "../shared/config";
 import { clearWhatsAppWebLocalSessionData } from "./page-scripts/clear-local-session";
 import { extractWhatsAppWebSidecarDump } from "./page-scripts/extract-history";
 import { extractWhatsAppWebMainDump } from "./page-scripts/extract-session";
@@ -26,24 +26,21 @@ export async function executeScriptInPage(tabId, func, args = []) {
 }
 
 export async function isWhatsAppWebLoggedInTab(tabId) {
-  const [result] = await executeScriptInPage(tabId, (selectors, qrHints) => {
-    const text = String(document.body?.innerText || "").toLowerCase();
-    const hasQrCanvas = Array.from(document.querySelectorAll("canvas, [data-testid], [aria-label]")).some((element) => {
-      const testId = String(element.getAttribute("data-testid") || "").toLowerCase();
-      const aria = String(element.getAttribute("aria-label") || "").toLowerCase();
-      return testId.includes("qr") || aria.includes("qr") || aria.includes("scan");
-    });
-    if (hasQrCanvas || qrHints.some((hint) => text.includes(hint))) {
-      return false;
-    }
+  const [result] = await executeScriptInPage(tabId, (selectors) => {
+    const isVisibleElement = (element) => {
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
+    };
     return selectors.some((selector) => {
       try {
-        return Boolean(document.querySelector(selector));
+        const element = document.querySelector(selector);
+        return Boolean(element && isVisibleElement(element));
       } catch {
         return false;
       }
     });
-  }, [WHATSAPP_LOGGED_IN_SELECTORS, WHATSAPP_QR_HINTS]);
+  }, [WHATSAPP_LOGGED_IN_SELECTORS]);
   return result?.result === true;
 }
 

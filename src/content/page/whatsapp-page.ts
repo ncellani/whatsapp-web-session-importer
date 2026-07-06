@@ -1,33 +1,24 @@
-import { WHATSAPP_LOGGED_IN_SELECTORS, WHATSAPP_QR_HINTS } from "../../shared/config";
+import { WHATSAPP_LOGGED_IN_SELECTORS } from "../../shared/config";
 
-function pageText(): string {
-  return String(document.body?.innerText || "").toLowerCase();
+function isVisibleElement(element: Element): boolean {
+  const rect = element.getBoundingClientRect();
+  const style = window.getComputedStyle(element);
+  return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
 }
 
-function hasQrCanvas(): boolean {
-  return Array.from(document.querySelectorAll("canvas, [data-testid], [aria-label]")).some((element) => {
-    const testId = String(element.getAttribute("data-testid") || "").toLowerCase();
-    const aria = String(element.getAttribute("aria-label") || "").toLowerCase();
-    return testId.includes("qr") || aria.includes("qr") || aria.includes("scan");
-  });
-}
-
-function isQrLoginScreen(): boolean {
-  const text = pageText();
-  return hasQrCanvas() || WHATSAPP_QR_HINTS.some((hint) => text.includes(hint));
-}
-
-export function isWhatsAppLoggedIn(): boolean {
-  if (isQrLoginScreen()) {
-    return false;
-  }
+function hasLoggedInShell(): boolean {
   return WHATSAPP_LOGGED_IN_SELECTORS.some((selector) => {
     try {
-      return Boolean(document.querySelector(selector));
+      const element = document.querySelector(selector);
+      return Boolean(element && isVisibleElement(element));
     } catch {
       return false;
     }
   });
+}
+
+export function isWhatsAppLoggedIn(): boolean {
+  return hasLoggedInShell();
 }
 
 function isColorDark(value: unknown): boolean | null {

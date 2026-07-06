@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   appStateCollectionVersionKey,
   buildImportChunks,
@@ -7,12 +7,44 @@ import {
 } from "../src/background/chunks";
 import { normalizeContactForWhatsmeow, normalizeHistoryJIDsWithContactLIDMap } from "../src/background/conversion";
 import { importPayloadForOptions } from "../src/background/payload";
+import { isWhatsAppLoggedIn } from "../src/content/page/whatsapp-page";
 import {
   normalizeBaseUrl,
   normalizeClientHost,
   parseAutofillHash,
   removeAutofillHashParams
 } from "../src/shared/url";
+
+const originalDocument = globalThis.document;
+const originalWindow = globalThis.window;
+
+afterEach(() => {
+  Object.defineProperty(globalThis, "document", { value: originalDocument, configurable: true });
+  Object.defineProperty(globalThis, "window", { value: originalWindow, configurable: true });
+});
+
+function installWhatsAppPageStub({ loggedInShell = false, qrElement = false, text = "" } = {}) {
+  const shellElement = {
+    getBoundingClientRect: () => ({ width: 320, height: 640 })
+  };
+  const qrLikeElement = {
+    getAttribute: (name: string) => name === "data-testid" ? "qr-code" : ""
+  };
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: {
+      body: { innerText: text },
+      querySelector: () => loggedInShell ? shellElement : null,
+      querySelectorAll: () => qrElement ? [qrLikeElement] : []
+    }
+  });
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: {
+      getComputedStyle: () => ({ display: "block", visibility: "visible" })
+    }
+  });
+}
 
 describe("URL helpers", () => {
   it("normalizes subscription slugs, hosts, and full HTTPS URLs", () => {
@@ -129,6 +161,26 @@ describe("payload policy", () => {
       privacyTokens: [{ userJid: "1@s.whatsapp.net" }],
       nctSalt: "salt"
     });
+  });
+});
+
+describe("WhatsApp login detection", () => {
+  it("prioritizes visible logged-in shell markers over lingering QR hints", () => {
+    installWhatsAppPageStub({
+      loggedInShell: true,
+      qrElement: true,
+      text: "scan the qr"
+    });
+
+    expect(isWhatsAppLoggedIn()).toBe(true);
+  });
+
+  it("returns logged out when only QR hints are present", () => {
+    installWhatsAppPageStub({
+      text: "scan the qr"
+    });
+
+    expect(isWhatsAppLoggedIn()).toBe(false);
   });
 });
 

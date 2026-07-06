@@ -80,17 +80,3 @@ export const WHATSAPP_LOGGED_IN_SELECTORS = [
   '[aria-label="Chats"]',
   '[aria-label="Conversas"]'
 ];
-
-export const WHATSAPP_QR_HINTS = [
-  "qr code",
-  "scan the qr",
-  "use whatsapp on your computer",
-  "link with phone number",
-  "escaneie",
-  "código qr",
-  "codigo qr",
-  "conectar um aparelho",
-  "vincular aparelho",
-  "vincular com número de telefone",
-  "vincular com numero de telefone"
-];

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.2 - 06/07/2026
+
+### Fixed
+
+- Deteccao de sessao conectada agora usa sinais visiveis de login, evitando falso negativo causado por textos ou elementos de QR que permanecem no DOM.
+- Pacote da extensao recriado para a versao 0.2.2.
+
 ## 0.2.1 - 03/07/2026
 
 ### Changed
