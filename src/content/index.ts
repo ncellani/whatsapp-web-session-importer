@@ -217,7 +217,7 @@ import { PANEL_HOST_ID, PANEL_TEXT, panelTemplate } from "./panel/template";
     await storageSet({
       [STORAGE_KEYS.serverUrl]: autofill.client,
       [STORAGE_KEYS.instanceToken]: autofill.token || "",
-      [STORAGE_KEYS.includeHistory]: autofill.includeHistory ?? true
+      [STORAGE_KEYS.includeHistory]: autofill.includeHistory ?? DEFAULT_INCLUDE_HISTORY
     });
     return true;
   }
@@ -790,7 +790,7 @@ import { PANEL_HOST_ID, PANEL_TEXT, panelTemplate } from "./panel/template";
       return;
     }
     if (!client || !token) {
-      setResult("Informe o nome da assinatura e o token.", "error");
+      setResult("Informe o nome do cliente e o token.", "error");
       return;
     }
 
@@ -813,7 +813,7 @@ import { PANEL_HOST_ID, PANEL_TEXT, panelTemplate } from "./panel/template";
       return;
     }
     if (!client || !token) {
-      setResult("Informe o nome da assinatura e o token.", "error");
+      setResult("Informe o nome do cliente e o token.", "error");
       return;
     }
 

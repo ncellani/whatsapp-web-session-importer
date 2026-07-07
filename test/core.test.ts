@@ -54,7 +54,7 @@ describe("URL helpers", () => {
   });
 
   it("rejects invalid subscription hosts", () => {
-    expect(() => normalizeClientHost("bad host")).toThrow("Nome da assinatura invalido");
+    expect(() => normalizeClientHost("bad host")).toThrow("Nome do cliente invalido");
   });
 
   it("rejects local or non-HTTPS instance URLs in the production build", () => {

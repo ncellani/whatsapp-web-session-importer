@@ -128,7 +128,7 @@ export function normalizeClientHost(value: unknown): string {
     return "";
   }
   if (!/^[a-z0-9][a-z0-9.-]*(?::[0-9]{1,5})?$/.test(host)) {
-    throw new Error("Nome da assinatura invalido. Use exatamente o nome da assinatura ou uma URL completa.");
+    throw new Error("Nome do cliente invalido. Use exatamente o nome do cliente ou uma URL completa.");
   }
   return host;
 }

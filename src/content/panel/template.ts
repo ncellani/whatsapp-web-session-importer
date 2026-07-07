@@ -1,5 +1,5 @@
 import { EXTENSION_CUSTOMIZATION } from "../../customization";
-import { iconClose, iconEye, iconImport, iconSettings, iconTrash } from "./icons";
+import { iconClose, iconEye, iconSettings, iconTrash } from "./icons";
 
 export const PANEL_TEXT = EXTENSION_CUSTOMIZATION.panelText;
 export const PANEL_HOST_ID = "session-transfer-panel";
@@ -18,12 +18,12 @@ export function panelTemplate(version: string): string {
         --connector-muted: rgba(0, 0, 0, 0.6);
         --connector-line: rgba(0, 0, 0, 0.1);
         --connector-panel-border: rgba(0, 0, 0, 0.1);
-        --connector-accent: #1daa61;
-        --connector-accent-hover: #1b8755;
-        --connector-accent-text: #ffffff;
+        --connector-accent: #5ac9c7;
+        --connector-accent-hover: #45b9b7;
+        --connector-accent-text: #062120;
         --connector-hover: rgba(194, 189, 184, 0.15);
         --connector-notice: #f7f5f3;
-        --connector-focus: rgba(29, 170, 97, 0.3);
+        --connector-focus: rgba(90, 201, 199, 0.3);
         --connector-danger: #ea0038;
         --connector-danger-soft: #fde8eb;
         --connector-ok: #1b8755;
@@ -31,8 +31,8 @@ export function panelTemplate(version: string): string {
         --connector-warn: #a5691b;
         --connector-warn-soft: #fff7e5;
         --connector-warn-border: rgba(197, 135, 48, 0.35);
-        --connector-shadow: 0 16px 44px rgba(11, 20, 26, 0.22), 0 0 22px rgba(29, 170, 97, 0.18);
-        --connector-primary-shadow: rgba(29, 170, 97, 0.2);
+        --connector-shadow: 0 16px 44px rgba(11, 20, 26, 0.22), 0 0 22px rgba(90, 201, 199, 0.18);
+        --connector-primary-shadow: rgba(90, 201, 199, 0.2);
         --connector-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
         display: block;
         font-family: var(--connector-font);
@@ -66,12 +66,12 @@ export function panelTemplate(version: string): string {
         --connector-text: #fafafa;
         --connector-muted: rgba(255, 255, 255, 0.6);
         --connector-line: rgba(255, 255, 255, 0.1);
-        --connector-accent: #21c063;
-        --connector-accent-hover: #1daa61;
+        --connector-accent: #5ac9c7;
+        --connector-accent-hover: #45b9b7;
         --connector-accent-text: #0a0a0a;
         --connector-hover: rgba(255, 255, 255, 0.1);
         --connector-notice: #161717;
-        --connector-focus: rgba(33, 192, 99, 0.3);
+        --connector-focus: rgba(90, 201, 199, 0.3);
         --connector-danger: #fb5061;
         --connector-danger-soft: #321622;
         --connector-ok: #71eb85;
@@ -79,9 +79,9 @@ export function panelTemplate(version: string): string {
         --connector-warn: #ffd279;
         --connector-warn-soft: #362c1f;
         --connector-warn-border: rgba(255, 210, 121, 0.32);
-        --connector-panel-border: rgba(33, 192, 99, 0.28);
-        --connector-shadow: 0 18px 46px rgba(0, 0, 0, 0.6), 0 0 30px rgba(33, 192, 99, 0.28);
-        --connector-primary-shadow: rgba(33, 192, 99, 0.24);
+        --connector-panel-border: rgba(90, 201, 199, 0.28);
+        --connector-shadow: 0 18px 46px rgba(0, 0, 0, 0.6), 0 0 30px rgba(90, 201, 199, 0.28);
+        --connector-primary-shadow: rgba(90, 201, 199, 0.24);
       }
 
       * {
@@ -138,27 +138,19 @@ export function panelTemplate(version: string): string {
 
       .mark {
         align-items: center;
-        background: var(--connector-accent);
         border-radius: 8px;
-        color: var(--connector-accent-text);
         display: flex;
-        font-family: var(--connector-font);
-        font-size: 18px;
-        font-weight: 700;
-        line-height: 1;
         height: 36px;
         justify-content: center;
+        overflow: hidden;
         width: 36px;
       }
 
-      .mark svg {
-        fill: none;
-        height: 21px;
-        stroke: currentColor;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-        stroke-width: 2.2;
-        width: 21px;
+      .mark img {
+        display: block;
+        height: 100%;
+        object-fit: contain;
+        width: 100%;
       }
 
       .title {
@@ -595,7 +587,7 @@ export function panelTemplate(version: string): string {
     <section class="panel" role="dialog" aria-label="${PANEL_TEXT.title}">
       <header class="topbar">
         <div id="devModeToggleArea" class="brand" title="Modo técnico">
-          <span class="mark" aria-hidden="true">${iconImport()}</span>
+          <span class="mark" aria-hidden="true"><img src="${chrome.runtime.getURL("icons/icon-128.png")}" alt="" /></span>
           <span>
             <span class="title">${PANEL_TEXT.title}</span>
             <span id="statusLabel" class="subtitle">${PANEL_TEXT.defaultStatus}</span>

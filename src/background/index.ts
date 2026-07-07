@@ -111,7 +111,7 @@ function userFacingErrorMessage(error) {
     return message;
   }
   if (message.includes("Failed to fetch") || message.includes("NetworkError")) {
-    return "Falha de rede ao conectar. Confira o nome da assinatura, a conexão e as permissões da extensão.";
+    return "Falha de rede ao conectar. Confira o nome do cliente, a conexão e as permissões da extensão.";
   }
   if (message.includes("Falha ao enviar chunk")) {
     return `${message}. A importação foi interrompida antes da finalização.`;
@@ -192,7 +192,7 @@ async function runFloatingImport(tab, options, onStatus) {
     const includeHistory = options?.includeHistory === undefined ? DEFAULT_INCLUDE_HISTORY : options?.includeHistory === true;
     const disconnectLocal = options?.disconnectLocal !== false;
     if (!client || !token) {
-      throw new Error("Informe o nome da assinatura e o token");
+      throw new Error("Informe o nome do cliente e o token");
     }
 
     const serverUrl = normalizeBaseUrl(client);
@@ -286,7 +286,7 @@ async function runHistoryOnlyImport(tab, options, onStatus) {
   const client = String(options?.client || "").trim();
   const token = String(options?.token || "").trim();
   if (!client || !token) {
-    throw new Error("Informe o nome da assinatura e o token");
+    throw new Error("Informe o nome do cliente e o token");
   }
   const serverUrl = normalizeBaseUrl(client);
   await chrome.storage.local.set({

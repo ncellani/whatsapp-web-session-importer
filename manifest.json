@@ -21,6 +21,12 @@
   "background": {
     "service_worker": "background.js"
   },
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/icon-16.png", "icons/icon-32.png", "icons/icon-48.png", "icons/icon-128.png"],
+      "matches": ["https://web.whatsapp.com/*"]
+    }
+  ],
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": [
     "https://web.whatsapp.com/*",

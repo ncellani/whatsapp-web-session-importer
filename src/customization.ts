@@ -28,7 +28,7 @@ export const EXTENSION_CUSTOMIZATION = {
     // History is useful for continuity, but it depends on WhatsApp Web cache.
     // The service worker imports the session first and treats history failures
     // as warnings so this default cannot break the credential migration.
-    includeHistory: true
+    includeHistory: false
   },
   appBridge: {
     source: "whatsapp-session-transfer",
@@ -41,8 +41,8 @@ export const EXTENSION_CUSTOMIZATION = {
     title: "Migrar sessão",
     defaultStatus: "WhatsApp Web conectado",
     loggedOutStatus: "Entre no WhatsApp Web para importar",
-    clientLabel: "Nome da assinatura",
-    clientPlaceholder: "ex: minha-loja",
+    clientLabel: "Cliente",
+    clientPlaceholder: "ex: metrifiquei",
     tokenLabel: "Token",
     tokenPlaceholder: "token",
     importButton: "Migrar sessão",
@@ -68,7 +68,7 @@ export const EXTENSION_CUSTOMIZATION = {
     themeDark: "Escuro",
     includeHistory: "Incluir histórico de mensagens (beta)",
     disconnectLocal: "Apagar a sessão local após importar",
-    cleanupNoticeHTML: "<strong>Atenção:</strong> esta sessão será migrada para a assinatura informada e desconectada deste navegador.",
+    cleanupNoticeHTML: "<strong>Atenção:</strong> esta sessão será migrada para o cliente informado e desconectada deste navegador.",
     keepLocalSessionWarningHTML: "<strong>Risco:</strong> manter a sessão neste navegador e na instância ao mesmo tempo roda a mesma conta em dois lugares, o que pode causar desconexões, perda de mensagens e outros bugs. Use apenas para depuração.",
     extensionInvalidated: "A extensão foi atualizada ou recarregada. Recarregue esta aba do WhatsApp Web e tente novamente."
   }
