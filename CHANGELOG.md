@@ -5,15 +5,14 @@
 ### Added
 
 - Bridge whitelabel estatico em `docs/` com `sdk.js`, `frame.html` e pagina demo para GitHub Pages.
-- SDK agora expoe `UazapiConnector.mount(...)`, um componente pronto para o SaaS renderizar botao/status/fallback de instalacao.
-- SDK agora expoe `UazapiConnector.create(...)` como camada headless para clientes renderizarem UI propria com estados padronizados.
+- SDK publico ficou focado na camada core: `SessionTransfer.ping(...)`, `open(...)`, `fallbackUrl(...)`, `buildWhatsAppUrl(...)`, `on(...)` e `off(...)`.
 - Suporte a bridge em iframe com `all_frames` e build local opcional para teste em `localhost`.
 - Fluxo de bridge agora salva `client`, `token` e opcoes no storage antes de abrir/reusar o WhatsApp Web, evitando expor token no hash quando chamado pelo SDK.
 - Bridge aceita `hideHistoryOption` e `lockHistoryOption` para controlar a opcao de historico no painel da extensao.
 - SDK pode configurar `panelLayout`, `hideClientField` e `hideTokenField` para transformar o painel da extensao em uma confirmacao central.
 - SDK adiciona aliases `showClientField`, `canEditClient`, `showTokenField` e `canEditToken` para controlar campos tecnicos de forma mais clara.
 - Conta detectada agora aparece sempre no subtitulo do painel como telefone formatado, usando LID apenas quando nao houver JID.
-- Pagina demo agora mostra um preview visual do painel da extensao sincronizado com as configuracoes.
+- Pagina demo agora funciona como teste tecnico do protocolo, mostrando payload, links, eventos, `ping` e `open`.
 - Documento `WHITELABEL_BRIDGE.md` com plano, ambiente de teste e estrategia de hospedagem estatica.
 
 ### Changed
@@ -42,7 +41,7 @@
 ### Changed
 
 - Removida a configuracao desnecessaria de salvar token no navegador; a extensao agora mantem o fluxo simples e usa a lixeira para limpar o token salvo.
-- `DEVELOPERS.md` atualizado com as formas recomendadas para um SaaS incorporar a extensao usando backend autorizado, incluindo link direto, bridge e o fluxo opcional com `importKey`.
+- `DEVELOPERS.md` atualizado com as formas recomendadas para um SaaS incorporar a extensao usando backend autorizado, incluindo link direto e bridge.
 - Nome publico ajustado para `Session Migration Connector`, removendo marca de backend do pacote publico.
 - Manifesto de producao manteve o dominio tecnico necessario para link abreviado e bridge, enquanto a marca publica da extensao ficou neutra.
 

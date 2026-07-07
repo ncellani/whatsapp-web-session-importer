@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Session Connector Bridge</title>
+    <title>Session Transfer Bridge</title>
     <style>
       body {
         margin: 0;
@@ -36,13 +36,45 @@
       a {
         color: #25c46a;
       }
+
+      .links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 4px;
+      }
+
+      .button {
+        min-height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 14px;
+        border-radius: 7px;
+        background: #25c46a;
+        color: #07120c;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      code {
+        color: #dbe6df;
+        overflow-wrap: anywhere;
+      }
     </style>
   </head>
   <body>
     <main>
-      <h1>Session Connector Bridge</h1>
+      <h1>Session Transfer Bridge</h1>
       <p>Arquivos estaticos para integracao com a extensao.</p>
-      <p><a href="./demo.html">Abrir demo</a></p>
+      <div class="links">
+        <a class="button" href="./import/?client=minha-loja&token=00000000-0000-4000-8000-000000000000">Testar link unico</a>
+        <a href="./demo.html">Abrir demo tecnica</a>
+      </div>
+      <p>
+        Metodo simples via link unico:
+        <code>/import/?client=minha-loja&amp;token=00000000-0000-4000-8000-000000000000</code>
+      </p>
     </main>
   </body>
 </html>

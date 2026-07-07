@@ -2,7 +2,7 @@ import { EXTENSION_CUSTOMIZATION } from "../../customization";
 import { iconClose, iconEye, iconImport, iconSettings, iconTrash } from "./icons";
 
 export const PANEL_TEXT = EXTENSION_CUSTOMIZATION.panelText;
-export const PANEL_HOST_ID = "session-connector-panel";
+export const PANEL_HOST_ID = "session-transfer-panel";
 
 export function panelTemplate(version: string): string {
   return `

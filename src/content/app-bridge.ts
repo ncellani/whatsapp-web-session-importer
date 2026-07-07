@@ -16,10 +16,10 @@ type PageCommand = {
   requestId?: string;
 };
 
-const guard = window as Window & { __whatsAppSessionConnectorBridge?: boolean };
+const guard = window as Window & { __whatsAppSessionTransferBridge?: boolean };
 
-if (!guard.__whatsAppSessionConnectorBridge) {
-  guard.__whatsAppSessionConnectorBridge = true;
+if (!guard.__whatsAppSessionTransferBridge) {
+  guard.__whatsAppSessionTransferBridge = true;
 
   const buildResponse = (data: PageCommand | undefined, payload: Record<string, unknown>) => ({
     source: APP_BRIDGE_SOURCE,

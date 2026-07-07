@@ -192,8 +192,8 @@ import { PANEL_HOST_ID, PANEL_TEXT, panelTemplate } from "./panel/template";
   async function applyAutofillFromUrl() {
     // SaaS/backend pages can open WhatsApp Web with:
     // https://web.whatsapp.com/#client=<client-or-host>&token=<instance-token>
-    // The hash is removed immediately after storing values so it is not left in
-    // the address bar, screenshots, or browser history.
+    // The URL params are removed immediately after storing values so they are
+    // not left in the address bar, screenshots, or browser history.
     const autofill = parseAutofillHash(location.href);
     if (!autofill) {
       return false;
@@ -204,9 +204,20 @@ import { PANEL_HOST_ID, PANEL_TEXT, panelTemplate } from "./panel/template";
       return false;
     }
 
+    applyBridgeUiOptions({
+      hideHistoryOption: autofill.hideHistoryOption ?? true,
+      lockHistoryOption: autofill.lockHistoryOption ?? true,
+      hideClientField: autofill.hideClientField ?? true,
+      hideTokenField: autofill.hideTokenField ?? true,
+      lockClientField: autofill.lockClientField ?? true,
+      lockTokenField: autofill.lockTokenField ?? true,
+      panelLayout: autofill.panelLayout || "center"
+    });
+
     await storageSet({
       [STORAGE_KEYS.serverUrl]: autofill.client,
-      [STORAGE_KEYS.instanceToken]: autofill.token || ""
+      [STORAGE_KEYS.instanceToken]: autofill.token || "",
+      [STORAGE_KEYS.includeHistory]: autofill.includeHistory ?? true
     });
     return true;
   }

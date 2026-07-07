@@ -10,7 +10,7 @@ Permitir que um SaaS de cliente consiga:
 - abrir o WhatsApp Web com a extensao ja pre-configurada;
 - manter a experiencia visual whitelabel dentro do SaaS do cliente;
 - evitar `*://*/*` no manifest;
-- manter o fluxo atual com `client` e `token`, sem exigir `importKey` nesta fase.
+- manter o fluxo atual com `client` e `token` autorizados pelo parceiro.
 
 ## Ideia principal
 
@@ -29,24 +29,25 @@ SaaS do cliente
 Exemplo de integracao no SaaS do cliente:
 
 ```html
-<script src="https://connector.uazapi.com/sdk.js"></script>
-
-<div id="whatsapp-migration"></div>
+<script src="https://connect.sessiontransfer.com/sdk.js"></script>
 
 <script>
-  UazapiConnector.mount("#whatsapp-migration", {
-    brandName: "Migrar WhatsApp",
-    client: "minha-loja",
-    token: "TOKEN",
-    includeHistory: true,
-    panelLayout: "center",
-    showClientField: false,
-    canEditClient: false,
-    showTokenField: false,
-    canEditToken: false
-  });
+  async function migrarWhatsApp() {
+    const status = await SessionTransfer.ping();
+    if (!status.installed) {
+      window.location.href = "https://chromewebstore.google.com/detail/cdjfbjfolpeenlmanmkoglhhcjfgcbpp";
+      return;
+    }
+
+    await SessionTransfer.open({
+      client: "minha-loja",
+      token: "TOKEN"
+    });
+  }
 </script>
 ```
+
+O SaaS do cliente renderiza o botao e a experiencia visual. O SDK fica responsavel apenas por detectar a extensao, abrir o WhatsApp Web e entregar o payload ao painel da extensao.
 
 O usuario final continua vendo apenas:
 
@@ -67,7 +68,7 @@ Em vez de permitir todos os sites, a extensao permite apenas o dominio central d
 
 ```json
 {
-  "matches": ["https://connector.uazapi.com/*"],
+  "matches": ["https://connect.sessiontransfer.com/*"],
   "js": ["app-bridge.js"],
   "run_at": "document_start",
   "all_frames": true
@@ -152,54 +153,32 @@ O SDK deve:
 
 - criar o iframe bridge invisivel;
 - enviar `PING` para detectar a extensao;
-- mostrar fallback de instalacao se a extensao nao responder;
 - enviar `START_IMPORT` quando a extensao estiver disponivel;
-- manter a UI whitelabel no SaaS do cliente;
-- expor uma API pronta para o parceiro.
+- devolver resultado simples para o SaaS decidir instalar, abrir link direto ou mostrar erro;
+- manter a UI whitelabel sob controle do SaaS do cliente.
 
 API sugerida:
 
 ```js
-UazapiConnector.mount("#whatsapp-migration", {
-  brandName: "Migrar sessao",
-  subtitle: "Conecte a sessao ativa do WhatsApp Web.",
-  buttonLabel: "Abrir WhatsApp",
-  markLabel: "WA",
-  primaryColor: "#25c46a",
+const status = await SessionTransfer.ping();
+
+if (!status.installed) {
+  window.location.href = "https://chromewebstore.google.com/detail/cdjfbjfolpeenlmanmkoglhhcjfgcbpp";
+  return;
+}
+
+await SessionTransfer.open({
   client: "minha-loja",
-  token: "TOKEN",
-  includeHistory: true,
-  lockHistoryOption: true,
-  panelLayout: "center",
-  showClientField: false,
-  canEditClient: false,
-  showTokenField: false,
-  canEditToken: false
+  token: "TOKEN"
 });
 ```
 
-Para SaaS que ja tem UI propria, manter a API de baixo nivel:
+Para montar fallback manual:
 
 ```js
-const connector = UazapiConnector.create({
+const url = SessionTransfer.fallbackUrl({
   client: "minha-loja",
-  token: "TOKEN",
-  onStateChange(state) {
-    // Renderize sua propria UI com: checking, missing, ready, opening, opened, error.
-  }
-});
-
-connector.check();
-connector.open();
-```
-
-Para controle totalmente manual, usar a camada core:
-
-```js
-UazapiConnector.open({
-  client: "minha-loja",
-  token: "TOKEN",
-  includeHistory: true
+  token: "TOKEN"
 });
 ```
 
@@ -243,51 +222,20 @@ Se o WhatsApp Web nao estiver logado:
 
 ## Parametros futuros
 
-Configuracoes ja suportadas pelo SDK:
+Configuracoes ja suportadas no payload:
 
 ```js
-UazapiConnector.mount("#whatsapp-migration", {
+SessionTransfer.open({
   client: "minha-loja",
-  token: "TOKEN",
-  includeHistory: true,
-  hideHistoryOption: true,
-  lockHistoryOption: true,
-  showClientField: false,
-  canEditClient: false,
-  showTokenField: false,
-  canEditToken: false,
-  panelLayout: "center",
-  brandName: "Cliente",
-  markLabel: "WA",
-  primaryColor: "#22c55e"
+  token: "TOKEN"
 });
 ```
 
 Configuracoes futuras:
 
 - `autoStart`;
-- `theme`;
-- `logoUrl`.
-
-## ImportKey como fase futura
-
-`importKey` nao e necessario para a v1.
-
-Ele pode entrar depois quando quisermos:
-
-- nao expor token no navegador;
-- gerar links de uso unico;
-- controlar expiracao;
-- auditar por parceiro/usuario;
-- resolver `importKey -> client/token` no backend.
-
-Fluxo futuro:
-
-```text
-SaaS do cliente -> importKey
-Extensao -> gateway com importKey + payload
-Gateway -> resolve instancia/token e encaminha para API
-```
+- `allowedOrigin`;
+- token efemero gerado por backend, se isso virar requisito de seguranca.
 
 ## Roadmap sugerido
 
@@ -296,7 +244,7 @@ Gateway -> resolve instancia/token e encaminha para API
 3. Criar comando `PING`/`START_IMPORT` via iframe bridge.
 4. Fazer background salvar configuracoes pendentes antes de abrir WhatsApp Web.
 5. Fazer content script consumir configuracoes pendentes e abrir painel.
-6. Criar SDK JS em camadas: `mount()` para UI pronta, `create()` headless para UI propria e `open()`/`ping()` como core.
+6. Criar SDK JS core com `ping()`, `open()`, `fallbackUrl()` e eventos simples.
 7. Criar pagina bridge/frame no dominio central.
 8. Manter fallback por hash para suporte e link manual.
 
@@ -320,7 +268,7 @@ demo.html
 
 `frame.html` recebe mensagens do SDK por `postMessage`, conversa com a extensao e devolve respostas. `sdk.js` cria o iframe, abstrai `PING`/`START_IMPORT` e oferece uma API simples para o SaaS do cliente. `demo.html` serve apenas para testes e documentacao de integracao.
 
-Deixar `importKey`, allowlist dinamica, branding avancado e auto-start para uma etapa posterior.
+Deixar allowlist dinamica, branding avancado e auto-start para uma etapa posterior.
 
 ## Ambiente de teste recomendado
 
@@ -381,16 +329,16 @@ docs/CNAME
 Se o GitHub Pages publicar a pasta `docs/` com dominio customizado, o objetivo e servir:
 
 ```text
-https://connector.uazapi.com
-https://connector.uazapi.com/frame.html
-https://connector.uazapi.com/sdk.js
+https://connect.sessiontransfer.com
+https://connect.sessiontransfer.com/frame.html
+https://connect.sessiontransfer.com/sdk.js
 ```
 
 O manifest da extensao deve apontar para o dominio final usado pelo iframe:
 
 ```json
 {
-  "matches": ["https://connector.uazapi.com/*"],
+  "matches": ["https://connect.sessiontransfer.com/*"],
   "js": ["app-bridge.js"],
   "run_at": "document_start",
   "all_frames": true
@@ -401,7 +349,6 @@ GitHub Pages serve para a v1 se:
 
 - o bridge for somente estatico;
 - nao houver segredos no frontend;
-- nao for necessario resolver `importKey` no servidor;
 - nao for necessario configurar headers HTTP avancados alem do que Pages oferece;
 - a validacao de origem puder ser simples no JS;
 - volume de trafego ficar dentro de limites normais de um asset estatico pequeno.
@@ -418,9 +365,9 @@ Configuracao sugerida:
 ```text
 1. Criar arquivos estaticos em docs/.
 2. Configurar GitHub Pages para publicar a pasta docs/.
-3. Configurar dominio customizado connector.uazapi.com.
+3. Configurar dominio customizado connect.sessiontransfer.com.
 4. Habilitar Enforce HTTPS.
-5. Atualizar manifest da extensao para https://connector.uazapi.com/*.
+5. Atualizar manifest da extensao para https://connect.sessiontransfer.com/*.
 6. Manter localhost como host adicional apenas com `npm run build:local`.
 ```
 
@@ -430,7 +377,7 @@ Para producao mais robusta no futuro, considerar Cloudflare Pages, Vercel, Netli
 - headers de seguranca;
 - logs e metricas;
 - versionamento de SDK;
-- futura resolucao de `importKey`.
+- regras operacionais por parceiro.
 
 ## Quando trocar para algo dinamico
 
@@ -443,10 +390,8 @@ Manter estatico enquanto:
 
 Trocar para backend/edge function quando precisarmos de:
 
-- `importKey`;
 - allowlist de parceiros alteravel sem publicar novo JS;
 - auditoria centralizada;
 - bloqueio/revogacao em tempo real;
 - rate limit por parceiro;
-- mascaramento total de `client/token`;
 - regras por tenant vindas do servidor.

@@ -3,7 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Session Connector Demo</title>
+    <meta http-equiv="Cache-Control" content="no-store" />
+    <title>Session Transfer Demo</title>
     <style>
       :root {
         color-scheme: light dark;
@@ -35,13 +36,12 @@
         width: min(1180px, 100%);
         margin: 0 auto;
         display: grid;
-        grid-template-columns: minmax(280px, 360px) minmax(320px, 420px) minmax(320px, 1fr);
+        grid-template-columns: minmax(280px, 360px) minmax(320px, 1fr);
         gap: 18px;
         align-items: start;
       }
 
-      .panel,
-      .preview-shell {
+      .panel {
         border: 1px solid var(--line);
         border-radius: 8px;
         background: var(--panel);
@@ -83,8 +83,7 @@
         text-transform: uppercase;
       }
 
-      input[type="text"],
-      input[type="password"] {
+      input[type="text"] {
         width: 100%;
         min-height: 42px;
         border: 1px solid transparent;
@@ -108,6 +107,35 @@
         font-size: 14px;
       }
 
+      button,
+      a.button {
+        min-height: 42px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        border-radius: 6px;
+        padding: 0 14px;
+        background: var(--primary);
+        color: #07120c;
+        font: inherit;
+        font-weight: 800;
+        text-decoration: none;
+        cursor: pointer;
+      }
+
+      button:hover,
+      a.button:hover {
+        background: var(--primary-hover);
+      }
+
+      a.secondary,
+      button.secondary {
+        border: 1px solid var(--line);
+        background: var(--panel-2);
+        color: var(--text);
+      }
+
       code {
         display: block;
         margin-top: 8px;
@@ -127,260 +155,91 @@
         font-weight: 800;
       }
 
-      .preview-stage {
-        min-height: 590px;
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        background:
-          linear-gradient(rgba(5, 10, 13, .72), rgba(5, 10, 13, .72)),
-          repeating-linear-gradient(0deg, rgba(255, 255, 255, .04) 0 1px, transparent 1px 74px),
-          repeating-linear-gradient(90deg, rgba(255, 255, 255, .035) 0 1px, transparent 1px 92px),
-          #0b141a;
-        position: relative;
-        overflow: hidden;
-      }
-
-      .preview-stage[data-layout="center"] {
-        backdrop-filter: blur(2px);
-        display: grid;
-        place-items: center;
-        padding: 18px;
-      }
-
-      .preview-stage[data-layout="corner"] .extension-preview {
-        position: absolute;
-        right: 18px;
-        top: 18px;
-      }
-
-      .extension-preview {
-        width: min(368px, 100%);
-        border: 1px solid rgba(37, 196, 106, .28);
-        border-radius: 8px;
-        background: #1d1f1f;
-        color: #fafafa;
-        box-shadow: 0 18px 46px rgba(0, 0, 0, .5), 0 0 30px rgba(33, 192, 99, .2);
-        overflow: hidden;
-      }
-
-      .preview-topbar {
-        min-height: 68px;
-        padding: 14px 16px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        border-bottom: 1px solid rgba(255, 255, 255, .1);
-      }
-
-      .preview-brand {
-        min-width: 0;
-        display: grid;
-        grid-template-columns: 36px minmax(0, 1fr);
-        align-items: center;
-        gap: 10px;
-      }
-
-      .preview-mark {
-        width: 36px;
-        height: 36px;
-        display: grid;
-        place-items: center;
-        border-radius: 8px;
-        background: var(--primary);
-        color: #0a0a0a;
-        font-weight: 800;
-      }
-
-      .preview-title {
-        display: block;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        font-weight: 800;
-      }
-
-      .preview-subtitle {
-        display: block;
-        margin-top: 2px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        color: rgba(255, 255, 255, .62);
-        font-size: 12px;
-      }
-
-      .preview-account-value {
-        color: rgba(255, 255, 255, .82);
-        font-weight: 600;
-      }
-
-      .preview-close {
-        width: 34px;
-        height: 34px;
-        border: 0;
-        border-radius: 6px;
-        background: transparent;
-        color: rgba(255, 255, 255, .62);
-        font: inherit;
-        font-size: 22px;
-      }
-
-      .preview-form {
-        display: grid;
-        gap: 14px;
-        padding: 16px 18px 18px;
-      }
-
-      .preview-field {
-        display: grid;
-        gap: 6px;
-        color: #fafafa;
-        font-size: 12px;
-        font-weight: 800;
-      }
-
-      .preview-input {
-        min-height: 40px;
-        border-radius: 8px;
-        background: #242626;
-        color: rgba(255, 255, 255, .62);
-        padding: 10px 11px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .preview-input[data-locked="true"]::after {
-        content: " travado";
-        color: rgba(255, 255, 255, .38);
-      }
-
-      .preview-account {
+      .status-card {
         display: grid;
         gap: 8px;
-        padding: 10px 11px;
-        border: 1px solid rgba(255, 255, 255, .1);
+        margin-bottom: 16px;
+        padding: 14px;
+        border: 1px solid var(--line);
         border-radius: 8px;
-        background: #161717;
+        background: var(--panel-2);
       }
 
-      .preview-account-title {
+      .status-card strong {
+        font-size: 14px;
+      }
+
+      .status-card span {
+        color: var(--muted);
         font-size: 13px;
-        font-weight: 800;
       }
 
-      .preview-row {
+      .status-card[data-state="ready"] strong {
+        color: var(--primary);
+      }
+
+      .status-card[data-state="missing"] strong,
+      .status-card[data-state="error"] strong {
+        color: var(--danger);
+      }
+
+      .action-list {
         display: grid;
-        gap: 2px;
-        color: rgba(255, 255, 255, .62);
-        font-size: 12px;
-        overflow-wrap: anywhere;
+        gap: 14px;
       }
 
-      .preview-row strong {
-        color: #fafafa;
-        font-size: 11px;
-      }
-
-      .preview-check {
+      .action-card {
         display: grid;
-        grid-template-columns: 16px minmax(0, 1fr);
-        align-items: center;
-        gap: 9px;
-        font-size: 13px;
-        font-weight: 800;
-      }
-
-      .preview-check[data-locked="true"] {
-        color: rgba(255, 255, 255, .42);
-      }
-
-      .preview-box {
-        width: 16px;
-        height: 16px;
-        border: 1px solid transparent;
-        border-radius: 3px;
-        background: var(--primary);
-        position: relative;
-      }
-
-      .preview-check[data-locked="true"][data-checked="true"] .preview-box {
-        background: rgba(255, 255, 255, .38);
-      }
-
-      .preview-check[data-checked="false"] .preview-box {
-        background: transparent;
-        border-color: rgba(255, 255, 255, .36);
-      }
-
-      .preview-check[data-locked="true"][data-checked="false"] .preview-box {
-        border-color: rgba(255, 255, 255, .26);
-      }
-
-      .preview-box::after {
-        content: "";
-        width: 5px;
-        height: 8px;
-        border-bottom: 2px solid #0a0a0a;
-        border-right: 2px solid #0a0a0a;
-        position: absolute;
-        left: 5px;
-        top: 2px;
-        transform: rotate(45deg);
-      }
-
-      .preview-check[data-checked="false"] .preview-box::after {
-        display: none;
-      }
-
-      .preview-button {
-        min-height: 42px;
-        border: 0;
-        border-radius: 6px;
-        background: var(--primary);
-        color: #0a0a0a;
-        font: inherit;
-        font-weight: 800;
-      }
-
-      .preview-notice {
-        padding: 9px 11px;
-        border: 1px solid rgba(255, 255, 255, .1);
+        gap: 12px;
+        padding: 14px;
+        border: 1px solid var(--line);
         border-radius: 8px;
-        background: #161717;
-        color: rgba(255, 255, 255, .62);
-        font-size: 12px;
+        background: var(--panel-2);
+      }
+
+      .action-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .action-copy {
+        display: grid;
+        gap: 4px;
+      }
+
+      .action-copy strong {
+        font-size: 14px;
+      }
+
+      .action-copy span {
+        color: var(--muted);
+        font-size: 13px;
         line-height: 1.45;
       }
 
-      .preview-meta {
-        display: flex;
-        justify-content: space-between;
-        gap: 12px;
-        padding: 9px 18px 10px;
-        border-top: 1px solid rgba(255, 255, 255, .1);
-        color: rgba(255, 255, 255, .62);
-        font-size: 12px;
+      .action-head button,
+      .action-head a.button {
+        flex: 0 0 auto;
       }
 
-      [data-preview-hidden="true"] {
-        display: none !important;
+      .action-card .code-title {
+        margin-top: 0;
       }
 
-      @media (max-width: 1050px) {
-        main {
-          grid-template-columns: minmax(280px, 1fr) minmax(320px, 420px);
-        }
-
-        .preview-shell {
-          grid-column: 1 / -1;
-        }
-      }
-
-      @media (max-width: 760px) {
+      @media (max-width: 860px) {
         main {
           grid-template-columns: 1fr;
+        }
+
+        .action-head {
+          display: grid;
+        }
+
+        .action-head button,
+        .action-head a.button {
+          width: 100%;
         }
       }
     </style>
@@ -389,19 +248,20 @@
     <main>
       <section class="panel">
         <h1>Config teste</h1>
+
         <section class="config-group">
-          <div class="config-title">Cliente</div>
-          <label>
-            Nome da assinatura
-            <input id="client" type="text" value="minha-loja" autocomplete="off" />
+          <div class="config-title">Historico</div>
+          <label class="check">
+            <input id="includeHistory" type="checkbox" checked />
+            Incluir historico
           </label>
           <label class="check">
-            <input id="showClientField" type="checkbox" />
-            Mostrar campo client
+            <input id="hideHistoryOption" type="checkbox" checked />
+            Esconder opcao de historico na extensao
           </label>
           <label class="check">
-            <input id="canEditClient" type="checkbox" />
-            Permitir editar client
+            <input id="lockHistoryOption" type="checkbox" checked />
+            Travar opcao de historico na extensao
           </label>
         </section>
 
@@ -422,154 +282,276 @@
         </section>
 
         <section class="config-group">
-          <div class="config-title">Historico</div>
-          <label class="check">
-            <input id="includeHistory" type="checkbox" checked />
-            Incluir historico
+          <div class="config-title">Cliente</div>
+          <label>
+            Nome da assinatura
+            <input id="client" type="text" value="minha-loja" autocomplete="off" />
           </label>
           <label class="check">
-            <input id="hideHistoryOption" type="checkbox" checked />
-            Esconder opcao de historico na extensao
+            <input id="showClientField" type="checkbox" />
+            Mostrar campo client
           </label>
           <label class="check">
-            <input id="lockHistoryOption" type="checkbox" checked />
-            Travar opcao de historico na extensao
+            <input id="canEditClient" type="checkbox" />
+            Permitir editar client
           </label>
         </section>
 
         <section class="config-group">
-          <div class="config-title">Comportamento</div>
+          <div class="config-title">Painel da extensao</div>
           <label class="check">
             <input id="centerPanel" type="checkbox" checked />
             Abrir painel no centro
           </label>
         </section>
-
-        <div class="code-title">Payload enviado (token oculto)</div>
-        <code id="payloadPreview"></code>
-        <div class="code-title">Codigo equivalente (token oculto)</div>
-        <code id="mountPreview"></code>
       </section>
 
-      <section>
-        <h2>Componente pronto</h2>
-        <div id="whatsapp-migration"></div>
-      </section>
-
-      <section class="preview-shell">
-        <h2>Preview da extensao</h2>
-        <div id="previewStage" class="preview-stage" data-layout="center">
-          <div class="extension-preview">
-            <div class="preview-topbar">
-              <div class="preview-brand">
-                <div class="preview-mark">WA</div>
-                <div>
-                  <span class="preview-title">Migrar sessao</span>
-                  <span id="previewSubtitle" class="preview-subtitle">Conta: <span class="preview-account-value">+55 11 99999-9999</span></span>
-                </div>
-              </div>
-              <button class="preview-close" type="button" aria-label="Fechar">×</button>
-            </div>
-            <div class="preview-form">
-              <div id="previewClientField" class="preview-field">
-                Nome da assinatura
-                <div id="previewClientInput" class="preview-input" data-preview-client>minha-loja</div>
-              </div>
-              <div id="previewTokenField" class="preview-field">
-                Token
-                <div id="previewTokenInput" class="preview-input">••••••••••••••••</div>
-              </div>
-              <div id="previewHistoryOption" class="preview-check">
-                <span class="preview-box"></span>
-                <span>Incluir histórico de mensagens (beta)</span>
-              </div>
-              <button class="preview-button" type="button">Migrar sessão</button>
-              <div class="preview-notice"><strong>Atenção:</strong> esta sessão será migrada para a assinatura informada e desconectada deste navegador.</div>
-            </div>
-            <div class="preview-meta">
-              <span>Modo padrão</span>
-              <span>Versão v0.2.3</span>
-            </div>
-          </div>
+      <section class="panel">
+        <h2>Teste do SDK</h2>
+        <div id="statusCard" class="status-card" data-state="idle">
+          <strong id="statusTitle">Aguardando teste</strong>
+          <span id="statusDetail">Use os botoes abaixo para verificar a extensao ou abrir o WhatsApp Web.</span>
         </div>
+
+        <div class="action-list">
+          <article class="action-card">
+            <div class="action-head">
+              <div class="action-copy">
+                <strong>Verificar extensao</strong>
+                <span>Confirma se a extensao esta instalada e respondendo pelo bridge. Nao abre WhatsApp e nao envia token.</span>
+              </div>
+              <button id="checkButton" type="button">Verificar extensao</button>
+            </div>
+            <div class="code-title">Codigo executado</div>
+            <code id="checkCodePreview"></code>
+          </article>
+
+          <article class="action-card">
+            <div class="action-head">
+              <div class="action-copy">
+                <strong>Abrir WhatsApp</strong>
+                <span>Envia o payload abaixo para a extensao. Com os defaults, basta client e token; o SDK aplica as demais opcoes.</span>
+              </div>
+              <button id="openButton" type="button">Abrir WhatsApp</button>
+            </div>
+            <div class="code-title">Payload enviado</div>
+            <code id="payloadPreview"></code>
+            <div class="code-title">Codigo executado</div>
+            <code id="openCodePreview"></code>
+          </article>
+
+          <article class="action-card">
+            <div class="action-head">
+              <div class="action-copy">
+                <strong>Metodo simples via link unico</strong>
+                <span>Abre a pagina intermediaria `/import/`, que verifica a extensao. Com os defaults, a URL leva apenas client e token.</span>
+              </div>
+              <a id="importLink" class="button secondary" href="#">Abrir pagina /import</a>
+            </div>
+            <div class="code-title">Link aberto</div>
+            <code id="connectorUrlPreview"></code>
+          </article>
+
+          <article class="action-card">
+            <div class="action-head">
+              <div class="action-copy">
+                <strong>Link direto para WhatsApp Web</strong>
+                <span>Abre o WhatsApp Web com os parametros no hash. Opcoes so entram no link quando fogem do default.</span>
+              </div>
+              <a id="whatsappLink" class="button secondary" href="#">Abrir link direto</a>
+            </div>
+            <div class="code-title">Link aberto</div>
+            <code id="whatsappUrlPreview"></code>
+          </article>
+
+          <article class="action-card">
+            <div class="action-head">
+              <div class="action-copy">
+                <strong>Instalar extensao</strong>
+                <span>Abre a Chrome Web Store. Nao envia payload e nao inicia migracao.</span>
+              </div>
+              <a id="installLink" class="button secondary" href="https://chromewebstore.google.com/detail/cdjfbjfolpeenlmanmkoglhhcjfgcbpp" target="_blank" rel="noreferrer">Instalar extensao</a>
+            </div>
+            <div class="code-title">Link aberto</div>
+            <code id="installUrlPreview"></code>
+          </article>
+        </div>
+
+        <div class="code-title">Eventos recebidos</div>
+        <code id="eventsPreview">Nenhum evento ainda.</code>
       </section>
     </main>
 
-    <script src="./sdk.js"></script>
+    <script src="./sdk.js?v=0.2.3-core"></script>
     <script>
+      var SDK_VERSION = "0.2.3-core";
+      var INSTALL_URL = "https://chromewebstore.google.com/detail/cdjfbjfolpeenlmanmkoglhhcjfgcbpp";
+      var eventLines = [];
+
       function values() {
         return {
-          client: document.getElementById("client").value,
-          showClientField: document.getElementById("showClientField").checked,
-          canEditClient: document.getElementById("canEditClient").checked,
-          token: document.getElementById("token").value,
-          showTokenField: document.getElementById("showTokenField").checked,
-          canEditToken: document.getElementById("canEditToken").checked,
           includeHistory: document.getElementById("includeHistory").checked,
           hideHistoryOption: document.getElementById("hideHistoryOption").checked,
           lockHistoryOption: document.getElementById("lockHistoryOption").checked,
+          token: document.getElementById("token").value,
+          showTokenField: document.getElementById("showTokenField").checked,
+          canEditToken: document.getElementById("canEditToken").checked,
+          client: document.getElementById("client").value,
+          showClientField: document.getElementById("showClientField").checked,
+          canEditClient: document.getElementById("canEditClient").checked,
           panelLayout: document.getElementById("centerPanel").checked ? "center" : "corner"
         };
       }
 
-      function renderPreview() {
-        var config = values();
-        document.getElementById("previewStage").dataset.layout = config.panelLayout;
-        document.getElementById("previewSubtitle").innerHTML = 'Conta: <span class="preview-account-value">+55 11 99999-9999</span>';
-        document.getElementById("previewClientField").dataset.previewHidden = String(!config.showClientField);
-        document.getElementById("previewTokenField").dataset.previewHidden = String(!config.showTokenField);
-        document.getElementById("previewHistoryOption").dataset.previewHidden = String(config.hideHistoryOption);
-        document.getElementById("previewHistoryOption").dataset.locked = String(config.lockHistoryOption);
-        document.getElementById("previewHistoryOption").dataset.checked = String(config.includeHistory);
-        document.getElementById("previewClientInput").dataset.locked = String(!config.canEditClient);
-        document.getElementById("previewTokenInput").dataset.locked = String(!config.canEditToken);
-        document.querySelector("[data-preview-client]").textContent = config.client || "minha-loja";
-        renderPayloadPreview(config);
+      function payloadForAction(config) {
+        var payload = {
+          client: config.client,
+          token: config.token
+        };
+        setOptionalValue(payload, "includeHistory", config.includeHistory, true);
+        setOptionalValue(payload, "hideHistoryOption", config.hideHistoryOption, true);
+        setOptionalValue(payload, "lockHistoryOption", config.lockHistoryOption, true);
+        setOptionalValue(payload, "showTokenField", config.showTokenField, false);
+        setOptionalValue(payload, "canEditToken", config.canEditToken, false);
+        setOptionalValue(payload, "showClientField", config.showClientField, false);
+        setOptionalValue(payload, "canEditClient", config.canEditClient, false);
+        if (config.panelLayout !== "center") {
+          payload.panelLayout = config.panelLayout;
+        }
+        return payload;
       }
 
-      function publicPayload(config) {
-        return Object.assign({}, config, {
-          token: config.token ? "[token preenchido]" : ""
-        });
+      function setOptionalValue(target, key, value, defaultValue) {
+        if (value !== defaultValue) {
+          target[key] = value;
+        }
       }
 
-      function renderPayloadPreview(config) {
-        var payload = publicPayload(config);
-        document.getElementById("payloadPreview").textContent = JSON.stringify(payload, null, 2);
-        document.getElementById("mountPreview").textContent = [
-          '<div id="whatsapp-migration"></div>',
-          '<script src="https://connector.uazapi.com/sdk.js"></' + 'script>',
-          '<script>',
-          '  UazapiConnector.mount("#whatsapp-migration", ' + JSON.stringify(payload, null, 2).replace(/\n/g, "\n  ") + ');',
-          '</' + 'script>'
+      function urlParams(config) {
+        var params = new URLSearchParams();
+        params.set("client", config.client);
+        params.set("token", config.token);
+        setOptionalParam(params, "includeHistory", config.includeHistory, true);
+        setOptionalParam(params, "hideHistoryOption", config.hideHistoryOption, true);
+        setOptionalParam(params, "lockHistoryOption", config.lockHistoryOption, true);
+        setOptionalParam(params, "showTokenField", config.showTokenField, false);
+        setOptionalParam(params, "canEditToken", config.canEditToken, false);
+        setOptionalParam(params, "showClientField", config.showClientField, false);
+        setOptionalParam(params, "canEditClient", config.canEditClient, false);
+        if (config.panelLayout !== "center") {
+          params.set("panelLayout", config.panelLayout);
+        }
+        return params.toString();
+      }
+
+      function setOptionalParam(params, key, value, defaultValue) {
+        if (value !== defaultValue) {
+          params.set(key, String(value));
+        }
+      }
+
+      function renderCode(config, connectorUrl, whatsappUrl) {
+        var payload = JSON.stringify(payloadForAction(config), null, 2).replace(/\n/g, "\n  ");
+        document.getElementById("checkCodePreview").textContent = [
+          "const status = await SessionTransfer.ping({ timeoutMs: 2200 });",
+          "",
+          "if (!status.installed) {",
+          "  // mostrar botao de instalacao",
+          "}"
         ].join("\n");
+        document.getElementById("openCodePreview").textContent = [
+          'var payload = ' + payload + ';',
+          '',
+          'var status = await SessionTransfer.ping();',
+          'if (!status.installed) {',
+          '  window.location.href = "' + INSTALL_URL + '";',
+          '  return;',
+          '}',
+          '',
+          'await SessionTransfer.open(payload);'
+        ].join("\n");
+        document.getElementById("connectorUrlPreview").textContent = connectorUrl;
+        document.getElementById("whatsappUrlPreview").textContent = whatsappUrl;
+        document.getElementById("installUrlPreview").textContent = INSTALL_URL;
       }
 
-      var widget = UazapiConnector.mount("#whatsapp-migration", {
-        brandName: "Migrar sessao",
-        subtitle: "Conecte a sessao ativa do WhatsApp Web.",
-        buttonLabel: "Abrir WhatsApp",
-        markLabel: "WA",
-        primaryColor: "#25c46a",
-        includeHistory: true,
-        panelLayout: "center",
-        hideHistoryOption: true,
-        lockHistoryOption: true,
-        getPayload: values
+      function render() {
+        var config = values();
+        var payload = payloadForAction(config);
+        var params = urlParams(config);
+        var connectorUrl = window.location.origin + "/import/?" + params;
+        var whatsappUrl = "https://web.whatsapp.com/#" + params;
+
+        document.getElementById("payloadPreview").textContent = JSON.stringify(payload, null, 2);
+        document.getElementById("importLink").href = connectorUrl;
+        document.getElementById("whatsappLink").href = whatsappUrl;
+        renderCode(config, connectorUrl, whatsappUrl);
+      }
+
+      function setStatus(state, title, detail) {
+        document.getElementById("statusCard").dataset.state = state;
+        document.getElementById("statusTitle").textContent = title;
+        document.getElementById("statusDetail").textContent = detail || "";
+      }
+
+      function logEvent(name, payload) {
+        eventLines.unshift(new Date().toLocaleTimeString() + " " + name + " " + JSON.stringify(payload));
+        eventLines = eventLines.slice(0, 8);
+        document.getElementById("eventsPreview").textContent = eventLines.join("\n");
+      }
+
+      async function checkExtension() {
+        if (!window.SessionTransfer) {
+          setStatus("error", "SDK nao carregou", "Verifique se /sdk.js esta disponivel.");
+          return;
+        }
+        setStatus("checking", "Verificando extensao", "Aguardando resposta do bridge.");
+        var result = await SessionTransfer.ping({ timeoutMs: 2200 });
+        if (result.installed) {
+          setStatus("ready", "Extensao instalada", result.version ? "Versao " + result.version : "Versao nao informada.");
+        } else {
+          setStatus("missing", "Extensao nao instalada", "Use o botao de instalacao ou teste o link direto depois de instalar.");
+        }
+      }
+
+      async function openWhatsApp() {
+        if (!window.SessionTransfer) {
+          setStatus("error", "SDK nao carregou", "Verifique se /sdk.js esta disponivel.");
+          return;
+        }
+        setStatus("checking", "Abrindo WhatsApp", "Enviando comando para a extensao.");
+        try {
+          var result = await SessionTransfer.open(payloadForAction(values()));
+          if (result && result.ok) {
+            setStatus("ready", "WhatsApp aberto", result.reused ? "Aba existente reutilizada." : "Nova aba aberta.");
+            return;
+          }
+          if (result && result.installed === false) {
+            setStatus("missing", "Extensao nao instalada", "Instale a extensao ou use a pagina /import.");
+            return;
+          }
+          setStatus("error", "Nao foi possivel abrir", (result && result.error) || "Resposta inesperada.");
+        } catch (error) {
+          setStatus("error", "Nao foi possivel abrir", error && error.message ? error.message : String(error));
+        }
+      }
+
+      ["includeHistory", "hideHistoryOption", "lockHistoryOption", "token", "showTokenField", "canEditToken", "client", "showClientField", "canEditClient", "centerPanel"].forEach(function (id) {
+        document.getElementById(id).addEventListener("input", render);
+        document.getElementById(id).addEventListener("change", render);
       });
 
-      ["client", "token", "includeHistory", "centerPanel", "showClientField", "canEditClient", "showTokenField", "canEditToken", "hideHistoryOption", "lockHistoryOption"].forEach(function (id) {
-        document.getElementById(id).addEventListener("input", function () {
-          renderPreview();
-          widget.refresh();
+      if (window.SessionTransfer) {
+        ["status", "opened", "missing", "error"].forEach(function (name) {
+          SessionTransfer.on(name, function (payload) {
+            logEvent(name, payload);
+          });
         });
-        document.getElementById(id).addEventListener("change", function () {
-          renderPreview();
-          widget.refresh();
-        });
-      });
+      }
 
-      renderPreview();
+      document.getElementById("checkButton").addEventListener("click", checkExtension);
+      document.getElementById("openButton").addEventListener("click", openWhatsApp);
+      render();
     </script>
   </body>
 </html>

@@ -15,7 +15,24 @@ export const APP_BRIDGE_MATCHES = [...EXTENSION_CUSTOMIZATION.appBridge.matches]
 
 export const AUTOFILL_PARAMS = {
   client: "client",
-  token: "token"
+  token: "token",
+  includeHistory: "includeHistory",
+  history: "history",
+  historico: "historico",
+  hideHistoryOption: "hideHistoryOption",
+  hideHistory: "hideHistory",
+  lockHistoryOption: "lockHistoryOption",
+  lockHistory: "lockHistory",
+  showClientField: "showClientField",
+  hideClientField: "hideClientField",
+  canEditClient: "canEditClient",
+  lockClientField: "lockClientField",
+  showTokenField: "showTokenField",
+  hideTokenField: "hideTokenField",
+  canEditToken: "canEditToken",
+  lockTokenField: "lockTokenField",
+  panelLayout: "panelLayout",
+  layout: "layout"
 } as const;
 
 export const STORAGE_KEYS = {

@@ -10,7 +10,7 @@
 export const EXTENSION_CUSTOMIZATION = {
   whatsappWebOrigin: "https://web.whatsapp.com",
   api: {
-    clientBaseDomain: "uazapi.com",
+    clientBaseDomain: "seudominio.com",
     authHeaderName: "token",
     paths: {
       instanceStatus: "/instance/status",
@@ -31,8 +31,8 @@ export const EXTENSION_CUSTOMIZATION = {
     includeHistory: true
   },
   appBridge: {
-    source: "whatsapp-session-connector",
-    matches: ["https://*.uazapi.com/*"]
+    source: "whatsapp-session-transfer",
+    matches: ["https://connect.sessiontransfer.com/*"]
   },
   panelText: {
     title: "Migrar sessão",

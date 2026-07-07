@@ -24,7 +24,7 @@
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": [
     "https://web.whatsapp.com/*",
-    "https://*.uazapi.com/*"
+    "https://connect.sessiontransfer.com/*"
   ],
   "content_scripts": [
     {
@@ -33,7 +33,7 @@
       "run_at": "document_start"
     },
     {
-      "matches": ["https://*.uazapi.com/*"],
+      "matches": ["https://connect.sessiontransfer.com/*"],
       "js": ["app-bridge.js"],
       "run_at": "document_start",
       "all_frames": true
