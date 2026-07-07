@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Session Migration Connector",
+  "name": "Metrifiquei Connector",
   "version": "0.2.3",
-  "description": "Migrates an authenticated WhatsApp Web session to an authorized backend with user approval.",
+  "description": "Extensão para conectar o Metrifiquei com o WhatsApp Web e outros serviços.",
   "action": {
     "default_title": "Abrir importador",
     "default_icon": {
