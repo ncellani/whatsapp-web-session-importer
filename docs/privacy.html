@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Política de Privacidade - Session Migration Connector</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #101312;
+        --panel: #ffffff;
+        --text: #18211c;
+        --muted: #5c6861;
+        --border: #dbe3de;
+        --accent: #25c46a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #f5f7f6;
+        color: var(--text);
+      }
+
+      main {
+        width: min(880px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 48px 0 64px;
+      }
+
+      article {
+        padding: 32px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: 0 20px 70px rgba(16, 19, 18, 0.08);
+      }
+
+      h1,
+      h2 {
+        margin: 0;
+        letter-spacing: 0;
+        line-height: 1.2;
+      }
+
+      h1 {
+        max-width: 720px;
+        font-size: clamp(28px, 4vw, 42px);
+      }
+
+      h2 {
+        margin-top: 32px;
+        font-size: 20px;
+      }
+
+      p,
+      li {
+        color: var(--muted);
+        line-height: 1.65;
+      }
+
+      ul {
+        padding-left: 22px;
+      }
+
+      .date {
+        margin: 10px 0 0;
+        color: var(--muted);
+      }
+
+      .mark {
+        width: 42px;
+        height: 42px;
+        display: grid;
+        place-items: center;
+        margin-bottom: 18px;
+        border-radius: 8px;
+        background: var(--accent);
+        color: #07120c;
+        font-weight: 800;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: var(--bg);
+        }
+
+        article {
+          --panel: #1b1f1d;
+          --text: #f1f5f2;
+          --muted: #a8b2ac;
+          --border: #2f3933;
+          box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <div class="mark">ST</div>
+        <h1>Política de Privacidade - Session Migration Connector</h1>
+        <p class="date">Data de vigência: 3 de julho de 2026</p>
+
+        <p>
+          Esta política descreve como a extensão Chrome Session Migration Connector processa dados ao migrar
+          uma sessão já conectada no WhatsApp Web para uma instância ou backend autorizado.
+        </p>
+
+        <h2>Finalidade única</h2>
+        <p>
+          A extensão existe para permitir que uma equipe autorizada importe uma sessão ativa do WhatsApp Web
+          para uma instância ou backend configurado pelo usuário ou pelo SaaS autorizado. Ela não oferece
+          recursos de publicidade, rastreamento, analytics de comportamento ou uso para qualquer finalidade fora
+          dessa migração.
+        </p>
+
+        <h2>Dados processados</h2>
+        <p>Durante a importação, a extensão pode processar:</p>
+        <ul>
+          <li>URL, subdomínio ou identificador da instância ou backend autorizado;</li>
+          <li>token ou credencial técnica fornecida para autorizar a importação;</li>
+          <li>
+            dados técnicos da sessão local do WhatsApp Web presentes no navegador, incluindo dados de
+            autenticação, chaves, metadados e bancos locais usados pelo WhatsApp Web;
+          </li>
+          <li>
+            identificadores da conta, contatos, conversas, mensagens recentes e metadados necessários para
+            validar a sessão e preservar âncoras de histórico durante a importação;
+          </li>
+          <li>
+            configurações locais da extensão, como URL/token informados, preferências de interface e diagnóstico
+            técnico opcional.
+          </li>
+        </ul>
+
+        <h2>Como os dados são usados</h2>
+        <p>Os dados são usados apenas para:</p>
+        <ul>
+          <li>validar se a instância ou backend informado está disponível e autorizado;</li>
+          <li>montar e enviar a carga técnica de importação da sessão;</li>
+          <li>enviar partes da importação em chunks com verificação de integridade;</li>
+          <li>enviar histórico recente quando necessário para ancorar a sessão importada;</li>
+          <li>
+            limpar a sessão local do WhatsApp Web após a conclusão, evitando uso duplicado da mesma conta no
+            navegador e na instância importada.
+          </li>
+        </ul>
+
+        <h2>Compartilhamento e transferência</h2>
+        <p>
+          A extensão envia os dados somente por HTTPS para a instância ou backend autorizado configurado pelo
+          usuário, ou para o backend/SaaS autorizado quando esse modo de integração estiver implementado. Esse
+          backend/SaaS pode então encaminhar a importação conforme a autorização do cliente.
+        </p>
+        <p>
+          Os dados não são vendidos, alugados ou compartilhados para publicidade, perfilamento, avaliação de
+          crédito, empréstimos ou finalidades não relacionadas ao objetivo da extensão.
+        </p>
+
+        <h2>Armazenamento local</h2>
+        <p>
+          A extensão usa chrome.storage.local para manter configurações e credenciais técnicas necessárias ao
+          fluxo de importação. Esses dados ficam no navegador do usuário até serem substituídos, apagados pela
+          própria extensão, removidos pelo usuário ou eliminados ao desinstalar a extensão.
+        </p>
+        <p>
+          Após uma importação bem-sucedida, a extensão limpa dados locais da sessão do WhatsApp Web no navegador
+          quando esse comportamento é executado pelo fluxo de importação.
+        </p>
+
+        <h2>Código remoto</h2>
+        <p>
+          A extensão não carrega nem executa JavaScript ou WebAssembly remoto. O código da extensão é empacotado
+          no item publicado. As conexões externas são requisições HTTPS para a instância configurada ou para o
+          backend/SaaS autorizado.
+        </p>
+
+        <h2>Controle do usuário</h2>
+        <p>O usuário pode:</p>
+        <ul>
+          <li>revisar a instância e o token antes de iniciar a importação;</li>
+          <li>remover dados salvos da extensão pelo controle de limpeza disponível na interface;</li>
+          <li>interromper o uso removendo a extensão do Chrome;</li>
+          <li>solicitar ao responsável pela instância ou pelo SaaS autorizado a exclusão ou revisão dos dados processados no backend.</li>
+        </ul>
+
+        <h2>Segurança</h2>
+        <p>
+          A extensão limita seu funcionamento aos hosts declarados no manifesto e envia dados por conexões HTTPS
+          quando se comunica com instâncias ou backends autorizados. Como a importação envolve credenciais e
+          dados de sessão, o uso deve ocorrer apenas em computadores confiáveis e com instâncias autorizadas.
+        </p>
+
+        <h2>Contato</h2>
+        <p>
+          Para dúvidas sobre esta política ou sobre o funcionamento da extensão, use o e-mail de contato do
+          publisher informado na Chrome Web Store.
+        </p>
+
+        <h2>Aviso</h2>
+        <p>
+          Session Migration Connector não é um produto oficial do WhatsApp. WhatsApp é marca de seus respectivos
+          proprietários.
+        </p>
+      </article>
+    </main>
+  </body>
+</html>
