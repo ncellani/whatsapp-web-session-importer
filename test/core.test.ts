@@ -76,9 +76,44 @@ describe("autofill hash helpers", () => {
     expect(parseAutofillHash("https://example.com/#client=acme&token=abc")).toBeNull();
   });
 
+  it("parses WhatsApp Web import options from hash params", () => {
+    expect(parseAutofillHash(
+      "https://web.whatsapp.com/#client=acme&token=abc&includeHistory=false&hideHistoryOption=true&lockHistoryOption=true&showClientField=false&canEditClient=false&showTokenField=true&canEditToken=true&panelLayout=center"
+    )).toEqual({
+      client: "acme",
+      token: "abc",
+      hasClient: true,
+      hasToken: true,
+      includeHistory: false,
+      hideHistoryOption: true,
+      lockHistoryOption: true,
+      hideClientField: true,
+      lockClientField: true,
+      hideTokenField: false,
+      lockTokenField: false,
+      panelLayout: "center"
+    });
+  });
+
+  it("parses aliases and query params for direct WhatsApp links", () => {
+    expect(parseAutofillHash("https://web.whatsapp.com/?client=acme&token=abc&history=0&hideClientField=1&lockTokenField=false&layout=corner")).toEqual({
+      client: "acme",
+      token: "abc",
+      hasClient: true,
+      hasToken: true,
+      includeHistory: false,
+      hideClientField: true,
+      lockTokenField: false,
+      panelLayout: "corner"
+    });
+  });
+
   it("removes only extension autofill params", () => {
     expect(removeAutofillHashParams("https://web.whatsapp.com/#client=acme&token=abc&keep=1")).toBe(
       "https://web.whatsapp.com/#keep=1"
+    );
+    expect(removeAutofillHashParams("https://web.whatsapp.com/?client=acme&showClientField=false&keep=1#token=abc&history=false&panelLayout=center&hashKeep=1")).toBe(
+      "https://web.whatsapp.com/?keep=1#hashKeep=1"
     );
   });
 });

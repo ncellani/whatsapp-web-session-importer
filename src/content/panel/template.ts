@@ -2,7 +2,7 @@ import { EXTENSION_CUSTOMIZATION } from "../../customization";
 import { iconClose, iconEye, iconImport, iconSettings, iconTrash } from "./icons";
 
 export const PANEL_TEXT = EXTENSION_CUSTOMIZATION.panelText;
-export const PANEL_HOST_ID = "session-connector-panel";
+export const PANEL_HOST_ID = "session-transfer-panel";
 
 export function panelTemplate(version: string): string {
   return `
@@ -41,6 +41,20 @@ export function panelTemplate(version: string): string {
         right: 20px;
         top: 20px;
         z-index: 2147483647;
+      }
+
+      :host([data-layout="center"]) {
+        align-items: center;
+        -webkit-backdrop-filter: blur(2px);
+        backdrop-filter: blur(2px);
+        background: rgba(5, 10, 13, 0.72);
+        bottom: 0;
+        display: flex;
+        justify-content: center;
+        left: 0;
+        padding: 16px;
+        right: 0;
+        top: 0;
       }
 
       :host([data-theme="dark"]) {
@@ -95,6 +109,11 @@ export function panelTemplate(version: string): string {
         overflow: hidden;
         pointer-events: auto;
         width: min(368px, calc(100vw - 32px));
+      }
+
+      :host([data-layout="center"]) .panel {
+        max-height: calc(100vh - 32px);
+        width: min(420px, calc(100vw - 32px));
       }
 
       .topbar {
@@ -166,6 +185,11 @@ export function panelTemplate(version: string): string {
         white-space: nowrap;
       }
 
+      .status-account {
+        color: var(--connector-text);
+        font-weight: 600;
+      }
+
       .icon-button {
         align-items: center;
         background: transparent;
@@ -186,6 +210,10 @@ export function panelTemplate(version: string): string {
         align-items: center;
         display: flex;
         gap: 4px;
+      }
+
+      :host([data-layout="center"]) #settingsButton {
+        display: none;
       }
 
       .icon-button:hover,
@@ -351,6 +379,22 @@ export function panelTemplate(version: string): string {
 
       .check input[type="checkbox"]:checked::before {
         transform: rotate(45deg) scale(1);
+      }
+
+      .check:has(input[type="checkbox"]:disabled) {
+        color: var(--connector-muted);
+        cursor: not-allowed;
+        opacity: 0.68;
+      }
+
+      .check input[type="checkbox"]:disabled {
+        border-color: var(--connector-line);
+        cursor: not-allowed;
+      }
+
+      .check input[type="checkbox"]:disabled:checked {
+        background: var(--connector-muted);
+        border-color: var(--connector-muted);
       }
 
       .check input[type="checkbox"]:focus-visible {
@@ -535,6 +579,13 @@ export function panelTemplate(version: string): string {
           right: 12px;
         }
 
+        :host([data-layout="center"]) {
+          bottom: 0;
+          left: 0;
+          right: 0;
+          top: 0;
+        }
+
         .panel {
           width: auto;
         }
@@ -561,11 +612,11 @@ export function panelTemplate(version: string): string {
       </header>
 
       <form id="importForm">
-        <label>
+        <label id="serverUrlOption">
           ${PANEL_TEXT.clientLabel}
           <input id="serverUrlInput" type="text" autocomplete="off" spellcheck="false" placeholder="${PANEL_TEXT.clientPlaceholder}" />
         </label>
-        <label>
+        <label id="instanceTokenOption">
           ${PANEL_TEXT.tokenLabel}
           <span class="token-field">
             <input id="instanceTokenInput" type="password" autocomplete="off" placeholder="${PANEL_TEXT.tokenPlaceholder}" />

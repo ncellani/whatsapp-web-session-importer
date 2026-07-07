@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.2.3 - 06/07/2026
+
+### Added
+
+- Bridge whitelabel estatico em `docs/` com `sdk.js`, `frame.html` e pagina demo para GitHub Pages.
+- SDK publico ficou focado na camada core: `SessionTransfer.ping(...)`, `open(...)`, `fallbackUrl(...)`, `buildWhatsAppUrl(...)`, `on(...)` e `off(...)`.
+- Suporte a bridge em iframe com `all_frames` e build local opcional para teste em `localhost`.
+- Fluxo de bridge agora salva `client`, `token` e opcoes no storage antes de abrir/reusar o WhatsApp Web, evitando expor token no hash quando chamado pelo SDK.
+- Bridge aceita `hideHistoryOption` e `lockHistoryOption` para controlar a opcao de historico no painel da extensao.
+- SDK pode configurar `panelLayout`, `hideClientField` e `hideTokenField` para transformar o painel da extensao em uma confirmacao central.
+- SDK adiciona aliases `showClientField`, `canEditClient`, `showTokenField` e `canEditToken` para controlar campos tecnicos de forma mais clara.
+- Conta detectada agora aparece sempre no subtitulo do painel como telefone formatado, usando LID apenas quando nao houver JID.
+- Pagina demo agora funciona como teste tecnico do protocolo, mostrando payload, links, eventos, `ping` e `open`.
+- Documento `WHITELABEL_BRIDGE.md` com plano, ambiente de teste e estrategia de hospedagem estatica.
+
+### Changed
+
+- `disconnectLocal` deixou de ser uma opcao publica do SDK/bridge; a sessao local e sempre limpa no modo padrao e so pode ser mantida pelo modo tecnico da extensao.
+- Painel deixou de abrir automaticamente ao acessar o WhatsApp Web por padrao; chamadas pelo SDK/bridge continuam abrindo o painel.
+- `confirmationMode` foi removido do SDK/bridge; o mesmo comportamento deve ser configurado explicitamente com `panelLayout`, `showClientField`, `showTokenField` e demais opcoes granulares.
+- Clique no icone da extensao agora foca uma aba existente do WhatsApp Web, ou abre uma nova se nenhuma existir, antes de abrir o painel.
+
+### Fixed
+
+- `PING` da bridge agora valida o runtime da extensao antes de responder, evitando falso positivo e erro de contexto invalidado quando a extensao e desativada com a pagina aberta.
+- Painel agora atualiza o status da sessao quando o WhatsApp Web termina de carregar em uma aba nova.
+- Painel solicitado no centro agora fica no canto e com acao desabilitada enquanto o WhatsApp Web ainda esta carregando a sessao.
+- Painel central nao alterna mais entre centro e canto quando os sinais de login do WhatsApp Web oscilam durante atualizacoes da pagina.
+
 ## 0.2.2 - 06/07/2026
 
 ### Fixed
@@ -12,7 +41,7 @@
 ### Changed
 
 - Removida a configuracao desnecessaria de salvar token no navegador; a extensao agora mantem o fluxo simples e usa a lixeira para limpar o token salvo.
-- `DEVELOPERS.md` atualizado com as formas recomendadas para um SaaS incorporar a extensao usando backend autorizado, incluindo link direto, bridge e o fluxo opcional com `importKey`.
+- `DEVELOPERS.md` atualizado com as formas recomendadas para um SaaS incorporar a extensao usando backend autorizado, incluindo link direto e bridge.
 - Nome publico ajustado para `Session Migration Connector`, removendo marca de backend do pacote publico.
 - Manifesto de producao manteve o dominio tecnico necessario para link abreviado e bridge, enquanto a marca publica da extensao ficou neutra.
 

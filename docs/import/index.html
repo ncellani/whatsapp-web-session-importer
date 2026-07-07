@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Cache-Control" content="no-store" />
+    <title>Conectar WhatsApp</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #101312;
+        --panel: #1b1f1d;
+        --panel-border: #2f3933;
+        --text: #f1f5f2;
+        --muted: #a8b2ac;
+        --green: #25c46a;
+        --green-dark: #1fad5c;
+        --danger: #ff7b72;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: radial-gradient(circle at top, #183323 0, transparent 34%), var(--bg);
+        color: var(--text);
+      }
+
+      main {
+        width: min(440px, 100%);
+        padding: 24px;
+        border: 1px solid var(--panel-border);
+        border-radius: 8px;
+        background: color-mix(in srgb, var(--panel) 94%, transparent);
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.36);
+      }
+
+      .mark {
+        width: 42px;
+        height: 42px;
+        display: grid;
+        place-items: center;
+        margin-bottom: 18px;
+        border-radius: 8px;
+        background: var(--green);
+        color: #07120c;
+        font-weight: 800;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 22px;
+        line-height: 1.2;
+      }
+
+      p {
+        margin: 10px 0 0;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .detail {
+        min-height: 48px;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 20px;
+      }
+
+      a,
+      button {
+        min-height: 42px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 14px;
+        border: 0;
+        border-radius: 7px;
+        font: inherit;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+      }
+
+      button,
+      .primary {
+        background: var(--green);
+        color: #07120c;
+      }
+
+      button:hover,
+      .primary:hover {
+        background: var(--green-dark);
+      }
+
+      .secondary {
+        border: 1px solid var(--panel-border);
+        background: transparent;
+        color: var(--text);
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+
+      [data-state="error"] h1,
+      [data-state="invalid"] h1 {
+        color: var(--danger);
+      }
+
+      @media (max-width: 420px) {
+        body {
+          padding: 16px;
+        }
+
+        main {
+          padding: 20px;
+        }
+
+        a,
+        button {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main id="panel" data-state="checking">
+      <div class="mark">WA</div>
+      <h1 id="title">Preparando conexão</h1>
+      <p id="message">Verificando se a extensão está instalada.</p>
+      <p id="detail" class="detail">Aguarde um instante.</p>
+      <div class="actions">
+        <button id="retryButton" type="button" hidden>Tentar novamente</button>
+        <a id="installLink" class="primary" hidden>Instalar extensão</a>
+        <a id="manualLink" class="secondary" href="https://web.whatsapp.com/" hidden>Abrir WhatsApp</a>
+      </div>
+    </main>
+
+    <script src="../sdk.js?v=0.2.3-core"></script>
+    <script>
+      (function () {
+        "use strict";
+
+        var INSTALL_URL = "https://chromewebstore.google.com/detail/cdjfbjfolpeenlmanmkoglhhcjfgcbpp";
+        var REDIRECT_DELAY_MS = 1400;
+        var STORAGE_KEY = "sessionTransfer.importPayload";
+        var params = new URLSearchParams(window.location.search);
+        var panel = document.getElementById("panel");
+        var title = document.getElementById("title");
+        var message = document.getElementById("message");
+        var detail = document.getElementById("detail");
+        var retryButton = document.getElementById("retryButton");
+        var installLink = document.getElementById("installLink");
+        var manualLink = document.getElementById("manualLink");
+
+        installLink.href = INSTALL_URL;
+
+        function firstParam(names) {
+          for (var index = 0; index < names.length; index += 1) {
+            var value = params.get(names[index]);
+            if (value) return value.trim();
+          }
+          return "";
+        }
+
+        function optionalBoolean(names) {
+          var value = firstParam(names);
+          if (!value) return undefined;
+          var normalized = value.toLowerCase();
+          if (["1", "true", "sim", "yes", "on"].indexOf(normalized) !== -1) return true;
+          if (["0", "false", "nao", "no", "off"].indexOf(normalized) !== -1) return false;
+          return undefined;
+        }
+
+        function optionalNumber(names) {
+          var value = Number(firstParam(names));
+          return Number.isFinite(value) && value > 0 ? value : undefined;
+        }
+
+        function readStoredPayload() {
+          try {
+            return JSON.parse(window.sessionStorage.getItem(STORAGE_KEY) || "{}") || {};
+          } catch (error) {
+            return {};
+          }
+        }
+
+        function storePayload(nextPayload) {
+          if (!nextPayload.client || !nextPayload.token) return;
+          try {
+            window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(nextPayload));
+          } catch (error) {
+            // sessionStorage is a convenience for returning from the Web Store.
+          }
+        }
+
+        function applyBoolean(nextPayload, key, names) {
+          var value = optionalBoolean(names);
+          if (value !== undefined) {
+            nextPayload[key] = value;
+          }
+        }
+
+        function applyVisibility(nextPayload, hiddenKey, visibleNames, hiddenNames) {
+          var hidden = optionalBoolean(hiddenNames);
+          var visible = optionalBoolean(visibleNames);
+          if (hidden !== undefined) {
+            nextPayload[hiddenKey] = hidden;
+          } else if (visible !== undefined) {
+            nextPayload[hiddenKey] = visible === false;
+          }
+        }
+
+        function applyLock(nextPayload, lockedKey, editableNames, lockedNames) {
+          var locked = optionalBoolean(lockedNames);
+          var editable = optionalBoolean(editableNames);
+          if (locked !== undefined) {
+            nextPayload[lockedKey] = locked;
+          } else if (editable !== undefined) {
+            nextPayload[lockedKey] = editable === false;
+          }
+        }
+
+        function buildPayload() {
+          var nextPayload = Object.assign({
+            includeHistory: true,
+            hideHistoryOption: true,
+            lockHistoryOption: true,
+            hideClientField: true,
+            lockClientField: true,
+            hideTokenField: true,
+            lockTokenField: true,
+            panelLayout: "center"
+          }, params.toString() ? {} : readStoredPayload());
+          var client = firstParam(["client", "c", "assinatura"]);
+          var token = firstParam(["token", "t"]);
+          var panelLayout = firstParam(["panelLayout", "layout"]);
+          var timeoutMs = optionalNumber(["timeoutMs"]);
+
+          if (client) nextPayload.client = client;
+          if (token) nextPayload.token = token;
+          if (panelLayout) nextPayload.panelLayout = panelLayout === "corner" ? "corner" : "center";
+          if (timeoutMs) nextPayload.timeoutMs = timeoutMs;
+
+          applyBoolean(nextPayload, "includeHistory", ["includeHistory", "history", "historico"]);
+          applyBoolean(nextPayload, "hideHistoryOption", ["hideHistoryOption", "hideHistory"]);
+          applyBoolean(nextPayload, "lockHistoryOption", ["lockHistoryOption", "lockHistory"]);
+          applyVisibility(nextPayload, "hideClientField", ["showClientField", "showClient"], ["hideClientField", "hideClient"]);
+          applyLock(nextPayload, "lockClientField", ["canEditClient", "editClient"], ["lockClientField", "lockClient"]);
+          applyVisibility(nextPayload, "hideTokenField", ["showTokenField", "showToken"], ["hideTokenField", "hideToken"]);
+          applyLock(nextPayload, "lockTokenField", ["canEditToken", "editToken"], ["lockTokenField", "lockToken"]);
+
+          return nextPayload;
+        }
+
+        function appendBooleanIfChanged(nextParams, key, value, defaultValue) {
+          if (value !== undefined && value !== defaultValue) {
+            nextParams.set(key, value === true ? "true" : "false");
+          }
+        }
+
+        function buildWhatsAppUrl(nextPayload) {
+          var nextParams = new URLSearchParams();
+          nextParams.set("client", nextPayload.client || "");
+          nextParams.set("token", nextPayload.token || "");
+          appendBooleanIfChanged(nextParams, "includeHistory", nextPayload.includeHistory, true);
+          appendBooleanIfChanged(nextParams, "hideHistoryOption", nextPayload.hideHistoryOption, true);
+          appendBooleanIfChanged(nextParams, "lockHistoryOption", nextPayload.lockHistoryOption, true);
+          appendBooleanIfChanged(nextParams, "showClientField", nextPayload.hideClientField === false, false);
+          appendBooleanIfChanged(nextParams, "canEditClient", nextPayload.lockClientField === false, false);
+          appendBooleanIfChanged(nextParams, "showTokenField", nextPayload.hideTokenField === false, false);
+          appendBooleanIfChanged(nextParams, "canEditToken", nextPayload.lockTokenField === false, false);
+          if (nextPayload.panelLayout === "corner") {
+            nextParams.set("panelLayout", "corner");
+          }
+          return "https://web.whatsapp.com/#" + nextParams.toString();
+        }
+
+        function cleanVisibleUrl() {
+          if (!window.history || !window.location.search) return;
+          window.history.replaceState(null, document.title, window.location.pathname);
+        }
+
+        function setState(state, nextTitle, nextMessage, nextDetail) {
+          panel.dataset.state = state;
+          title.textContent = nextTitle;
+          message.textContent = nextMessage;
+          detail.textContent = nextDetail || "";
+        }
+
+        function showInstall() {
+          setState(
+            "missing",
+            "Instale a extensão",
+            "Você será redirecionado para instalar o conector.",
+            "Depois da instalação, abra este mesmo link novamente."
+          );
+          installLink.hidden = false;
+          manualLink.hidden = true;
+          retryButton.hidden = true;
+          window.setTimeout(function () {
+            window.location.assign(INSTALL_URL);
+          }, REDIRECT_DELAY_MS);
+        }
+
+        var payload = buildPayload();
+        manualLink.href = buildWhatsAppUrl(payload);
+        storePayload(payload);
+        cleanVisibleUrl();
+
+        async function start() {
+          installLink.hidden = true;
+          manualLink.hidden = true;
+          retryButton.hidden = true;
+
+          if (!payload.client || !payload.token) {
+            setState(
+              "invalid",
+              "Link inválido",
+              "Este link precisa receber client e token.",
+              "Exemplo: /import/?client=minha-loja&token=00000000-0000-4000-8000-000000000000"
+            );
+            return;
+          }
+
+          if (!window.SessionTransfer) {
+            showInstall();
+            return;
+          }
+
+          try {
+            setState("checking", "Preparando conexão", "Verificando se a extensão está instalada.", "Aguarde um instante.");
+            var status = await window.SessionTransfer.ping({ timeoutMs: 2200 });
+            if (!status.installed) {
+              showInstall();
+              return;
+            }
+
+            setState("opening", "Abrindo WhatsApp Web", "A extensão foi encontrada.", "Confirme a migração no painel que será aberto.");
+            var result = await window.SessionTransfer.open(payload);
+
+            if (result && result.ok) {
+              setState("opened", "WhatsApp Web aberto", "Confirme a migração no painel do WhatsApp Web.", "Se nada abriu, use o botão abaixo.");
+              manualLink.hidden = false;
+              return;
+            }
+
+            if (result && result.installed === false) {
+              showInstall();
+              return;
+            }
+
+            setState(
+              "error",
+              "Não foi possível abrir",
+              "A extensão respondeu, mas não concluiu a abertura do WhatsApp Web.",
+              (result && result.error) || "Tente novamente em alguns segundos."
+            );
+            retryButton.hidden = false;
+          } catch (error) {
+            setState(
+              "error",
+              "Não foi possível abrir",
+              "Falha ao comunicar com a extensão.",
+              error && error.message ? error.message : "Tente novamente em alguns segundos."
+            );
+            retryButton.hidden = false;
+          }
+        }
+
+        retryButton.addEventListener("click", start);
+        start();
+      })();
+    </script>
+  </body>
+</html>

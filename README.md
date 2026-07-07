@@ -8,9 +8,9 @@ Link direto:
 https://chromewebstore.google.com/detail/cdjfbjfolpeenlmanmkoglhhcjfgcbpp
 ```
 
-Extensão para migrar uma sessão já conectada no WhatsApp Web para a API da Uazapi.
+Extensão para migrar uma sessão já conectada no WhatsApp Web para uma API autorizada.
 
-Esta extensão funciona apenas para instâncias Uazapi. Use somente em um computador confiável e não compartilhe o token da instância com outras pessoas.
+Esta extensão funciona apenas para instâncias autorizadas. Use somente em um computador confiável e não compartilhe o token da instância com outras pessoas.
 
 ## Antes de começar
 
@@ -21,7 +21,7 @@ Você precisa ter:
 3. O token da instância.
 4. Acesso ao WhatsApp que será conectado na instância.
 
-Se você recebeu um link pronto da equipe de suporte ou do painel da Uazapi, use esse link. Ele já deve vir com `client` e `token` preenchidos.
+Se você recebeu um link pronto da equipe de suporte ou do painel da plataforma, use esse link. Ele já deve vir com `client` e `token` preenchidos.
 
 ## 1. Instalar a extensão pela Chrome Web Store
 
@@ -128,7 +128,7 @@ Antes de continuar:
 
 A extensão vai:
 
-1. Verificar a instância na API da Uazapi.
+1. Verificar a instância na API autorizada.
 2. Capturar a sessão conectada no WhatsApp Web.
 3. Esperar a sessão estar completa antes de enviar.
 4. Enviar a sessão para a API.
@@ -142,7 +142,7 @@ O histórico fica ligado por padrão. Se essa etapa falhar, a extensão mostra u
 
 ## 5. Depois da migração
 
-Depois que a migração terminar, acompanhe a instância na Uazapi.
+Depois que a migração terminar, acompanhe a instância no painel da plataforma.
 
 Se tudo estiver correto, a instância deve ficar conectada pela API.
 
@@ -167,7 +167,7 @@ Verifique:
 
 1. Se o nome da assinatura está correto.
 2. Se o token da instância está correto.
-3. Se a instância existe na Uazapi.
+3. Se a instância existe na plataforma.
 4. Se o WhatsApp Web terminou de carregar as conversas.
 5. Se a internet está funcionando.
 
@@ -196,6 +196,8 @@ Ela também não conecta uma instância sozinha se o WhatsApp Web ainda não est
 Ela não deve ser usada em computadores públicos ou compartilhados.
 
 ## Para desenvolvedores
+
+O guia de integracao para parceiros fica em [CONNECTOR_INTEGRATION.md](CONNECTOR_INTEGRATION.md).
 
 O guia técnico completo fica em [DEVELOPERS.md](DEVELOPERS.md).
 
