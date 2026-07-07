@@ -12,13 +12,11 @@ Isso reduz atrito porque o cliente final faz uma ação que ele já conhece: ent
 
 ## Qual era o problema
 
-Em fluxos baseados apenas no backend, a conexão pode depender de QR Code, pair code, passkey ou algum challenge temporário. Quando esse desafio aparece fora do navegador do usuário, o suporte fica mais difícil:
+Em fluxos baseados apenas no backend, a conexão pode depender de QR Code, pair code ou passkey. Quando essa etapa acontece fora do navegador do usuário, o suporte fica mais difícil:
 
-- o cliente precisa entender uma etapa técnica;
-- o backend pode não ter contexto visual para completar o desafio;
-- o challenge pode expirar;
-- cada navegador, conta e dispositivo pode se comportar de forma diferente;
-- a experiência não fica simples para o cliente final.
+- o cliente precisa alternar entre painel, celular e suporte;
+- a equipe tem menos contexto visual para orientar;
+- a experiência fica mais longa do que entrar direto no WhatsApp Web.
 
 ## Como resolvemos
 
@@ -30,7 +28,7 @@ Depois que o WhatsApp Web está conectado, a extensão:
 2. abre ou foca `https://web.whatsapp.com`;
 3. espera a sessão do WhatsApp Web terminar de carregar;
 4. identifica a conta conectada para o usuário confirmar;
-5. captura os dados técnicos da sessão dentro da aba do WhatsApp Web;
+5. captura a sessão autorizada dentro da aba do WhatsApp Web;
 6. envia a sessão por HTTPS para o backend autorizado;
 7. limpa a sessão local do navegador ao concluir, evitando uso duplicado da mesma conta.
 
@@ -49,7 +47,7 @@ O fluxo recomendado é:
 7. Conferir a conta exibida pela extensão.
 8. Clicar em **Migrar sessão**.
 
-O usuário não precisa copiar challenge, token interno, código técnico ou arquivo de sessão.
+O usuário só precisa concluir o login no WhatsApp Web e confirmar a conta exibida pela extensão.
 
 ## Como o SaaS deve abrir o fluxo
 
